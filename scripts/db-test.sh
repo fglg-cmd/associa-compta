@@ -4,6 +4,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 ADMIN_URL="${DATABASE_URL:-postgres://postgres:postgres@localhost:5432/postgres}"
+export PGPASSWORD="${PGPASSWORD:-postgres}"
 DB="associa_test_$$"
 psql "$ADMIN_URL" -q -c "create database $DB" >/dev/null
 trap 'psql "$ADMIN_URL" -q -c "drop database if exists $DB" >/dev/null' EXIT

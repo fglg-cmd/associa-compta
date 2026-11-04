@@ -1,32 +1,36 @@
+import path from "node:path";
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs/config";
 
-const supabaseHost = (() => {
+const supabase = (() => {
   try {
-    return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "").host;
+    const u = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "");
+    return { origin: u.origin, ws: `${u.protocol === "https:" ? "wss" : "ws"}://${u.host}` };
   } catch {
-    return "";
+    return { origin: "", ws: "" };
   }
 })();
+const isProd = process.env.NODE_ENV === "production" && process.env.NEXT_PUBLIC_APP_URL?.startsWith("https://");
 
 const csp = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' https://js.stripe.com https://eu-assets.i.posthog.com",
   "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: blob: https://*.googleusercontent.com ${supabaseHost ? `https://${supabaseHost}` : ""}`,
+  `img-src 'self' data: blob: https://*.googleusercontent.com ${supabase.origin}`,
   "font-src 'self' data:",
-  `connect-src 'self' ${supabaseHost ? `https://${supabaseHost} wss://${supabaseHost}` : ""} https://eu.i.posthog.com https://eu-assets.i.posthog.com https://*.ingest.de.sentry.io https://*.ingest.sentry.io`,
-  `frame-src 'self' blob: https://js.stripe.com ${supabaseHost ? `https://${supabaseHost}` : ""}`,
+  `connect-src 'self' ${supabase.origin} ${supabase.ws} https://eu.i.posthog.com https://eu-assets.i.posthog.com https://*.ingest.de.sentry.io https://*.ingest.sentry.io`,
+  `frame-src 'self' blob: https://js.stripe.com ${supabase.origin}`,
   "worker-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self' https://checkout.stripe.com https://billing.stripe.com",
   "frame-ancestors 'none'",
-  "upgrade-insecure-requests",
+  ...(isProd ? ["upgrade-insecure-requests"] : []),
 ].join("; ");
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  outputFileTracingRoot: path.join(__dirname, "../../"),
   poweredByHeader: false,
   transpilePackages: ["@associa/accounting", "@associa/bank-import"],
   serverExternalPackages: ["tesseract.js", "exceljs", "@react-pdf/renderer", "mammoth"],

@@ -13,7 +13,7 @@ export const metadata = { title: "Paramètres" };
 
 const ROLE_LABEL = { owner: "Propriétaire", admin: "Administrateur", treasurer: "Trésorier", member: "Membre du bureau", viewer: "Lecteur" };
 
-export default async function SettingsPage({ params, searchParams }: { params: Promise<{ org: string }>; searchParams: Promise<{ onglet?: string; statut?: string }> }) {
+export default async function SettingsPage({ params, searchParams }: { params: Promise<{ org: string }>; searchParams: Promise<{ onglet?: string; statut?: string; raison?: string }> }) {
   const { org: slug } = await params;
   const sp = await searchParams;
   const ctx = await getOrgContext(slug);
@@ -64,7 +64,7 @@ export default async function SettingsPage({ params, searchParams }: { params: P
   }
   if (tab === "abonnement") {
     const { data: sub } = await supabase.from("subscriptions").select("*").eq("organization_id", org.id).maybeSingle();
-    content = <BillingPanel orgId={org.id} current={org.plan} plans={Object.values(PLANS)} subscription={sub} canManage={canAdmin} billingEnabled={features.billing} success={sp.statut === "succes"} />;
+    content = <>{sp.raison === "export" && <div className="mb-4 rounded-lg bg-accent-soft px-4 py-3 text-[13px] text-accent">Les exports Excel et PDF détaillés (balance, grand livre, journal) sont inclus dès l&apos;offre Essentiel.</div>}<BillingPanel orgId={org.id} current={org.plan} plans={Object.values(PLANS)} subscription={sub} canManage={canAdmin} billingEnabled={features.billing} success={sp.statut === "succes"} /></>;
   }
   if (tab === "support") {
     const { data: tickets } = await supabase.from("support_tickets").select("id, subject, status, admin_reply, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(20);

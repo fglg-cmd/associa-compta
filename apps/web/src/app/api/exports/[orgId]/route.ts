@@ -8,6 +8,7 @@ import { buildFec, buildTables } from "@/modules/reports/tabular";
 import { toCsv, toXlsx } from "@/modules/reports/render";
 import { renderPdf } from "@/modules/reports/pdf";
 import { planOf } from "@/lib/plans";
+import { publicEnv } from "@/lib/public-env";
 import { slugify } from "@/lib/utils";
 import type { Organization } from "@/lib/types";
 
@@ -20,13 +21,14 @@ const TITLES: Record<string, string> = {
   "compte-resultat": "Compte de résultat", bilan: "Bilan", adherents: "Liste des adhérents", ag: "Comptes annuels — Assemblée générale",
 };
 
-async function generate(orgId: string, params: { rapport: string; format: string; exercice?: string | null; narrative?: string }) {
+async function generate(orgId: string, params: { rapport: string; format: string; exercice?: string | null; narrative?: string; interactive?: boolean }) {
   const { org } = await requireOrgMember(orgId);
   const supabase = await createClient();
   const { data: full } = await supabase.from("organizations").select("*").eq("id", orgId).single<Organization>();
   const report = z.enum(REPORTS).parse(params.rapport);
   const format = z.enum(["pdf", "xlsx", "csv", "txt"]).parse(params.format);
   if (format !== "csv" && planOf(org.plan).tier === "free" && report !== "compte-resultat" && report !== "bilan" && report !== "ag") {
+    if (params.interactive) return NextResponse.redirect(`${publicEnv.appUrl}/app/${org.slug}/parametres?onglet=abonnement&raison=export`, 303);
     return NextResponse.json({ error: "Les exports Excel et PDF détaillés sont inclus dans l'offre Essentiel." }, { status: 402 });
   }
   const fy = await resolveFiscalYear(orgId, params.exercice);
@@ -85,7 +87,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ orgI
   const { orgId } = await params;
   const sp = req.nextUrl.searchParams;
   try {
-    return await generate(orgId, { rapport: sp.get("rapport") ?? "", format: sp.get("format") ?? "pdf", exercice: sp.get("exercice") });
+    return await generate(orgId, { rapport: sp.get("rapport") ?? "", format: sp.get("format") ?? "pdf", exercice: sp.get("exercice"), interactive: true });
   } catch (e) {
     return handle(e);
   }

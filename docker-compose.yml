@@ -1,0 +1,33 @@
+# Stack locale.
+#   1. Supabase local (Auth, PostgreSQL, Storage) : `npx supabase start`
+#      → applique automatiquement supabase/migrations
+#   2. Application : `docker compose up --build web`
+#   3. Tests SQL d'intégrité sur PostgreSQL jetable : `docker compose run --rm db-test`
+services:
+  web:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:-http://host.docker.internal:54321}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+        NEXT_PUBLIC_POSTHOG_KEY: ${NEXT_PUBLIC_POSTHOG_KEY:-}
+        NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
+    env_file: apps/web/.env.local
+    ports: ["3000:3000"]
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    restart: unless-stopped
+
+  postgres-test:
+    image: postgres:16-alpine
+    environment: { POSTGRES_PASSWORD: postgres }
+    healthcheck: { test: ["CMD", "pg_isready", "-U", "postgres"], interval: 2s, retries: 20 }
+    profiles: ["test"]
+
+  db-test:
+    image: postgres:16-alpine
+    depends_on: { postgres-test: { condition: service_healthy } }
+    environment: { DATABASE_URL: "postgres://postgres:postgres@postgres-test:5432/postgres", PGPASSWORD: postgres }
+    volumes: ["./:/repo:ro"]
+    entrypoint: ["sh", "-c", "apk add --no-cache bash >/dev/null && bash /repo/scripts/db-test.sh"]
+    profiles: ["test"]

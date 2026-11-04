@@ -1,0 +1,42 @@
+# Configuration Supabase (CLI) — développement local et référence pour la production.
+project_id = "associa-compta"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public"]
+max_rows = 5000
+
+[db]
+port = 54322
+major_version = 16
+
+[storage]
+enabled = true
+file_size_limit = "25MiB"
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/auth/callback"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+enable_signup = true
+minimum_password_length = 10
+
+[auth.email]
+enable_signup = true
+double_confirm_changes = true
+enable_confirmations = true
+
+[auth.external.google]
+enabled = true
+client_id = "env(SUPABASE_AUTH_GOOGLE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_GOOGLE_SECRET)"
+skip_nonce_check = false
+
+[auth.external.azure]
+enabled = true
+client_id = "env(SUPABASE_AUTH_AZURE_CLIENT_ID)"
+secret = "env(SUPABASE_AUTH_AZURE_SECRET)"
+url = "https://login.microsoftonline.com/common/v2.0"

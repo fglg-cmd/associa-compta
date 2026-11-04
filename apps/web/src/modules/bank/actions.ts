@@ -283,7 +283,7 @@ export interface MatchCandidate {
 export async function findMatchCandidates(orgId: string, txId: string) {
   return run(async (): Promise<MatchCandidate[]> => {
     const { supabase } = await requireOrgWriter(orgId);
-    const { data: tx } = await supabase.from("bank_transactions").select("date, amount, bank_account_id, bank_accounts(account_id)").eq("id", txId).single();
+    const { data: tx } = await supabase.from("bank_transactions").select("date, amount, bank_account_id, bank_accounts(account_id)").eq("id", txId).eq("organization_id", orgId).single();
     if (!tx) throw new Error("Mouvement introuvable.");
     const accountId = (tx.bank_accounts as unknown as { account_id: string }).account_id;
     const d = new Date(`${tx.date}T00:00:00Z`);

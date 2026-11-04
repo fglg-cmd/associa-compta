@@ -67,7 +67,7 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
           options: { emailRedirectTo: redirectTo, data: { full_name: fullName } },
         });
         if (error) throw error;
-        if (data.session) router.push("/onboarding");
+        if (data.session) router.push(next !== "/app" ? next : "/onboarding");
         else setSent(true);
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });

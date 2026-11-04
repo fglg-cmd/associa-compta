@@ -8,7 +8,7 @@ export default async function MarketingLayout({ children }: { children: React.Re
   return (
     <div className="min-h-dvh">
       <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur-md">
-        <div className="mx-auto flex h-14 max-w-6xl items-center gap-8 px-5">
+        <div className="mx-auto flex h-14 max-w-6xl items-center gap-4 px-4 sm:gap-8 sm:px-5">
           <Link href="/"><Logo /></Link>
           <nav className="hidden gap-6 text-[13.5px] text-muted md:flex">
             <Link href="/#fonctionnalites" className="hover:text-foreground">Fonctionnalités</Link>
@@ -20,8 +20,9 @@ export default async function MarketingLayout({ children }: { children: React.Re
               <Button asChild variant="primary"><Link href="/app">Ouvrir l&apos;application</Link></Button>
             ) : (
               <>
-                <Button asChild variant="ghost"><Link href="/connexion">Connexion</Link></Button>
-                <Button asChild variant="primary"><Link href="/inscription">Essayer gratuitement</Link></Button>
+                <Button asChild variant="ghost" className="hidden sm:inline-flex"><Link href="/connexion">Connexion</Link></Button>
+                <Button asChild variant="ghost" className="sm:hidden"><Link href="/connexion">Se connecter</Link></Button>
+                <Button asChild variant="primary"><Link href="/inscription"><span className="sm:hidden">Essayer</span><span className="hidden sm:inline">Essayer gratuitement</span></Link></Button>
               </>
             )}
           </div>

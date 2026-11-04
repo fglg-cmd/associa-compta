@@ -12,7 +12,7 @@ export function LogoMark({ className }: { className?: string }) {
 
 export function Logo({ className }: { className?: string }) {
   return (
-    <span className={cn("inline-flex items-center gap-2 font-semibold tracking-[-0.02em]", className)}>
+    <span className={cn("inline-flex shrink-0 items-center gap-2 whitespace-nowrap font-semibold tracking-[-0.02em]", className)}>
       <LogoMark />
       <span>
         Associa<span className="text-muted font-medium"> Compta</span>

@@ -67,7 +67,7 @@ export async function registerDocument(orgId: string, input: z.input<typeof regi
 /** Rattache automatiquement le justificatif au mouvement bancaire de même montant (s'il est unique). */
 export async function autoMatchDocument(orgId: string, docId: string) {
   const { supabase } = await requireOrgWriter(orgId);
-  const { data: doc } = await supabase.from("documents").select("extracted_amount, extracted_date, created_at, bank_transaction_id, entry_id").eq("id", docId).single();
+  const { data: doc } = await supabase.from("documents").select("extracted_amount, extracted_date, created_at, bank_transaction_id, entry_id").eq("id", docId).eq("organization_id", orgId).single();
   if (!doc || doc.bank_transaction_id || doc.entry_id || !doc.extracted_amount) return null;
   const ref = (doc.extracted_date as string | null) ?? (doc.created_at as string).slice(0, 10);
   const { data: txs } = await supabase

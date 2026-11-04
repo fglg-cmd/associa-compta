@@ -42,7 +42,7 @@ importers:
         version: 4.9.0(react@19.1.10)
       '@sentry/nextjs':
         specifier: 11.10.0
-        version: 11.10.0(next@15.5.29(@opentelemetry/api@1.10.0)(@types/node@22.20.5)(react-dom@19.1.10(react@19.1.10))(react@19.1.10))(react@19.1.10)(vite@7.3.7(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.33.0))
+        version: 11.10.0(next@15.5.29(@opentelemetry/api@1.10.0)(@playwright/test@1.63.0)(@types/node@22.20.5)(react-dom@19.1.10(react@19.1.10))(react@19.1.10))(react@19.1.10)(vite@7.3.7(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.33.0))
       '@supabase/ssr':
         specifier: 0.12.7
         version: 0.12.7(@supabase/supabase-js@2.119.0(@opentelemetry/api@1.10.0))
@@ -66,7 +66,7 @@ importers:
         version: 14.9.1(react-dom@19.1.10(react@19.1.10))(react@19.1.10)
       geist:
         specifier: 1.9.1
-        version: 1.9.1(next@15.5.29(@opentelemetry/api@1.10.0)(@types/node@22.20.5)(react-dom@19.1.10(react@19.1.10))(react@19.1.10))
+        version: 1.9.1(next@15.5.29(@opentelemetry/api@1.10.0)(@playwright/test@1.63.0)(@types/node@22.20.5)(react-dom@19.1.10(react@19.1.10))(react@19.1.10))
       lucide-react:
         specifier: 1.68.0
         version: 1.68.0(@types/react@19.1.17)(react@19.1.10)
@@ -75,7 +75,7 @@ importers:
         version: 1.13.0
       next:
         specifier: 15.5.29
-        version: 15.5.29(@opentelemetry/api@1.10.0)(@types/node@22.20.5)(react-dom@19.1.10(react@19.1.10))(react@19.1.10)
+        version: 15.5.29(@opentelemetry/api@1.10.0)(@playwright/test@1.63.0)(@types/node@22.20.5)(react-dom@19.1.10(react@19.1.10))(react@19.1.10)
       openai:
         specifier: 7.50.0
         version: 7.50.0(zod@4.6.7)
@@ -122,6 +122,9 @@ importers:
       '@eslint/eslintrc':
         specifier: ^3.3.7
         version: 3.3.7
+      '@playwright/test':
+        specifier: 1.63.0
+        version: 1.63.0
       '@tailwindcss/postcss':
         specifier: 4.3.4
         version: 4.3.4
@@ -789,6 +792,11 @@ packages:
 
   '@oxc-project/types@0.152.0':
     resolution: {integrity: sha512-oM/5rLBm2tPkg0iBgkH/FOeR3PCDpY19GTgAZjMFM8h9WI9VW7cLgzp6nwtarYKmovavIQZ+Fe/RKX/8C8O/Rw==}
+
+  '@playwright/test@1.63.0':
+    resolution: {integrity: sha512-oxMK4vllB9RK5NQ2l1pq1IfOf2AvnEuj/vYGDj0H2nMtmtZpKtCwt/l00GEO6xjGfpBNAvjovvYdCm50dRQkpQ==}
+    engines: {node: '>=20'}
+    hasBin: true
 
   '@posthog/browser-common@0.10.6':
     resolution: {integrity: sha512-AKJeONaS5OfEKJDDBsq8OWSSPnHW1AFyHYg6bd3q+Q6KCddA6SlVSylFfui161mquhU3tfgraMgSBs4LgFShQA==}
@@ -3282,6 +3290,16 @@ packages:
     resolution: {integrity: sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==}
     engines: {node: '>=12'}
 
+  playwright-core@1.63.0:
+    resolution: {integrity: sha512-rYCsBF/M5HjUch52bbtVONEFjv6Xu8sm8h72dNlR5bzIE1fvC/bxgspzkjSfU+MweEMmPM8KJebG6nnyxo5mCg==}
+    engines: {node: '>=20'}
+    hasBin: true
+
+  playwright@1.63.0:
+    resolution: {integrity: sha512-+7ziBLidS4NaNCdt57SUDT+wYmmd5fmiQejUic/kb+YsYSCPyOOE9sebzMjNmQrsnNpDJqd4WHvV/8lfKfUDUg==}
+    engines: {node: '>=20'}
+    hasBin: true
+
   png-js@2.0.0:
     resolution: {integrity: sha512-GdzJuUMc6ZSpxFJWVxtOH1bzYHym+TOnveqUjb+VJIbZWbZzyiRGFiKhbiielfpYbgMlhHVhsJ0FTazfuRFkMA==}
 
@@ -4465,6 +4483,10 @@ snapshots:
 
   '@oxc-project/types@0.152.0': {}
 
+  '@playwright/test@1.63.0':
+    dependencies:
+      playwright: 1.63.0
+
   '@posthog/browser-common@0.10.6':
     dependencies:
       '@posthog/core': 1.63.1
@@ -5078,7 +5100,7 @@ snapshots:
     dependencies:
       '@sentry/core': 11.10.0
 
-  '@sentry/nextjs@11.10.0(next@15.5.29(@opentelemetry/api@1.10.0)(@types/node@22.20.5)(react-dom@19.1.10(react@19.1.10))(react@19.1.10))(react@19.1.10)(vite@7.3.7(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.33.0))':
+  '@sentry/nextjs@11.10.0(next@15.5.29(@opentelemetry/api@1.10.0)(@playwright/test@1.63.0)(@types/node@22.20.5)(react-dom@19.1.10(react@19.1.10))(react@19.1.10))(react@19.1.10)(vite@7.3.7(@types/node@22.20.5)(jiti@2.7.0)(lightningcss@1.33.0))':
     dependencies:
       '@opentelemetry/api': 1.10.0
       '@rollup/plugin-commonjs': 28.0.1(rollup@4.67.5)
@@ -5093,7 +5115,7 @@ snapshots:
       '@sentry/server-runtime-injection': 11.10.0
       '@sentry/server-utils': 11.10.0
       '@sentry/vercel-edge': 11.10.0
-      next: 15.5.29(@opentelemetry/api@1.10.0)(@types/node@22.20.5)(react-dom@19.1.10(react@19.1.10))(react@19.1.10)
+      next: 15.5.29(@opentelemetry/api@1.10.0)(@playwright/test@1.63.0)(@types/node@22.20.5)(react-dom@19.1.10(react@19.1.10))(react@19.1.10)
       rollup: 4.67.5
       stacktrace-parser: 0.1.11
     transitivePeerDependencies:
@@ -6457,9 +6479,9 @@ snapshots:
 
   functions-have-names@1.2.3: {}
 
-  geist@1.9.1(next@15.5.29(@opentelemetry/api@1.10.0)(@types/node@22.20.5)(react-dom@19.1.10(react@19.1.10))(react@19.1.10)):
+  geist@1.9.1(next@15.5.29(@opentelemetry/api@1.10.0)(@playwright/test@1.63.0)(@types/node@22.20.5)(react-dom@19.1.10(react@19.1.10))(react@19.1.10)):
     dependencies:
-      next: 15.5.29(@opentelemetry/api@1.10.0)(@types/node@22.20.5)(react-dom@19.1.10(react@19.1.10))(react@19.1.10)
+      next: 15.5.29(@opentelemetry/api@1.10.0)(@playwright/test@1.63.0)(@types/node@22.20.5)(react-dom@19.1.10(react@19.1.10))(react@19.1.10)
 
   generator-function@2.0.1: {}
 
@@ -6968,7 +6990,7 @@ snapshots:
 
   natural-compare@1.4.0: {}
 
-  next@15.5.29(@opentelemetry/api@1.10.0)(@types/node@22.20.5)(react-dom@19.1.10(react@19.1.10))(react@19.1.10):
+  next@15.5.29(@opentelemetry/api@1.10.0)(@playwright/test@1.63.0)(@types/node@22.20.5)(react-dom@19.1.10(react@19.1.10))(react@19.1.10):
     dependencies:
       '@next/env': 15.5.29
       '@swc/helpers': 0.5.15
@@ -6987,6 +7009,7 @@ snapshots:
       '@next/swc-win32-arm64-msvc': 15.5.29
       '@next/swc-win32-x64-msvc': 15.5.29
       '@opentelemetry/api': 1.10.0
+      '@playwright/test': 1.63.0
       sharp: 0.35.5(@types/node@22.20.5)
     transitivePeerDependencies:
       - '@babel/core'
@@ -7153,6 +7176,12 @@ snapshots:
   picomatch@2.3.2: {}
 
   picomatch@4.0.7: {}
+
+  playwright-core@1.63.0: {}
+
+  playwright@1.63.0:
+    dependencies:
+      playwright-core: 1.63.0
 
   png-js@2.0.0:
     dependencies:
