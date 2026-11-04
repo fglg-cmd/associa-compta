@@ -3,6 +3,7 @@
  * un message d'erreur lisible en français.
  */
 import { ZodError } from "zod";
+import { unstable_rethrow } from "next/navigation";
 
 export type ActionResult<T = void> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -18,6 +19,8 @@ export function fail(error: string): { ok: false; error: string } {
 
 /** Traduit les erreurs PostgreSQL / Supabase en message utilisateur. */
 export function humanizeError(e: unknown): string {
+  // Les redirections / notFound de Next.js doivent se propager
+  unstable_rethrow(e);
   if (e instanceof ZodError) {
     return e.issues[0]?.message ?? "Données invalides.";
   }
