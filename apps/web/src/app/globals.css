@@ -1,0 +1,128 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * ASSOCIA COMPTA — Design tokens
+ * Neutres chauds, accent indigo profond, chiffres tabulaires.
+ */
+:root {
+  --background: oklch(0.992 0.002 286);
+  --surface: oklch(1 0 0);
+  --surface-2: oklch(0.975 0.003 286);
+  --foreground: oklch(0.21 0.006 286);
+  --muted: oklch(0.552 0.014 286);
+  --subtle: oklch(0.705 0.012 286);
+  --border: oklch(0.925 0.004 286);
+  --border-strong: oklch(0.87 0.006 286);
+  --ring: oklch(0.585 0.233 277);
+  --accent: oklch(0.511 0.262 277);
+  --accent-hover: oklch(0.457 0.24 277);
+  --accent-soft: oklch(0.962 0.018 272);
+  --accent-foreground: oklch(1 0 0);
+  --positive: oklch(0.527 0.137 150);
+  --positive-soft: oklch(0.962 0.044 157);
+  --negative: oklch(0.577 0.215 27);
+  --negative-soft: oklch(0.971 0.013 17);
+  --warning: oklch(0.666 0.157 58);
+  --warning-soft: oklch(0.973 0.071 103);
+  --shadow-color: 240 10% 10%;
+  /* Graphiques — palette validée (CVD, contraste) : recettes / dépenses */
+  --chart-1: #4f46e5;
+  --chart-2: #c2671f;
+  --chart-grid: oklch(0.94 0.003 286);
+}
+
+.dark {
+  --background: oklch(0.155 0.004 286);
+  --surface: oklch(0.19 0.005 286);
+  --surface-2: oklch(0.225 0.006 286);
+  --foreground: oklch(0.967 0.002 286);
+  --muted: oklch(0.705 0.012 286);
+  --subtle: oklch(0.552 0.014 286);
+  --border: oklch(0.274 0.006 286);
+  --border-strong: oklch(0.34 0.008 286);
+  --ring: oklch(0.673 0.182 276);
+  --accent: oklch(0.623 0.214 277);
+  --accent-hover: oklch(0.673 0.182 276);
+  --accent-soft: oklch(0.257 0.09 281);
+  --accent-foreground: oklch(1 0 0);
+  --positive: oklch(0.723 0.15 150);
+  --positive-soft: oklch(0.262 0.051 153);
+  --negative: oklch(0.704 0.191 22);
+  --negative-soft: oklch(0.258 0.092 26);
+  --warning: oklch(0.795 0.162 75);
+  --warning-soft: oklch(0.286 0.066 53);
+  --shadow-color: 0 0% 0%;
+  --chart-1: #7c83f5;
+  --chart-2: #d47a35;
+  --chart-grid: oklch(0.26 0.006 286);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-subtle: var(--subtle);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-ring: var(--ring);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-positive: var(--positive);
+  --color-positive-soft: var(--positive-soft);
+  --color-negative: var(--negative);
+  --color-negative-soft: var(--negative-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --shadow-xs: 0 1px 2px hsl(var(--shadow-color) / 0.04);
+  --shadow-sm: 0 1px 2px hsl(var(--shadow-color) / 0.05), 0 1px 3px hsl(var(--shadow-color) / 0.04);
+  --shadow-md: 0 4px 12px -2px hsl(var(--shadow-color) / 0.08), 0 2px 4px -2px hsl(var(--shadow-color) / 0.05);
+  --shadow-lg: 0 16px 40px -8px hsl(var(--shadow-color) / 0.18), 0 4px 12px -4px hsl(var(--shadow-color) / 0.08);
+  --animate-fade-in: fade-in 180ms ease-out;
+  --animate-scale-in: scale-in 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes scale-in {
+  from { opacity: 0; transform: translate(-50%, -48%) scale(0.97); }
+  to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@layer base {
+  * { border-color: var(--border); }
+  html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-feature-settings: "cv11", "ss01";
+  }
+  ::selection { background: color-mix(in oklch, var(--accent) 22%, transparent); }
+  :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 4px; }
+  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+}
+
+@utility tabular { font-variant-numeric: tabular-nums; }
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
