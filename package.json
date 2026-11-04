@@ -1,0 +1,15 @@
+{
+  "name": "associa-compta",
+  "private": true,
+  "packageManager": "pnpm@10.28.0",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "pnpm --filter @associa/web dev",
+    "build": "pnpm --filter @associa/web build",
+    "start": "pnpm --filter @associa/web start",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "test:db": "bash scripts/db-test.sh"
+  }
+}
