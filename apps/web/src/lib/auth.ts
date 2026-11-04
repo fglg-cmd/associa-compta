@@ -92,3 +92,8 @@ export async function isPlatformAdmin(): Promise<boolean> {
   const { data } = await supabase.from("platform_admins").select("user_id").eq("user_id", user.id).maybeSingle();
   return Boolean(data);
 }
+
+/** Garde explicite pour chaque page du back-office (en plus du layout). */
+export async function assertPlatformAdmin() {
+  if (!(await isPlatformAdmin())) notFound();
+}

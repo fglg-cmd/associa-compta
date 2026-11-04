@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "regions": ["cdg1"],
+  "crons": [{ "path": "/api/cron/reminders", "schedule": "17 8 * * *" }],
+  "functions": {
+    "src/app/api/ai/chat/route.ts": { "maxDuration": 120 },
+    "src/app/api/cron/reminders/route.ts": { "maxDuration": 300 }
+  }
+}
