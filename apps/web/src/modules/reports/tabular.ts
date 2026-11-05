@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { fetchAll } from "@/lib/fetch-all";
 import type { FiscalYear } from "@/lib/types";
 import { getStatements, getTrialBalance } from "../accounting/queries";
 
@@ -31,9 +32,9 @@ export async function buildTables(orgId: string, fy: FiscalYear, report: string)
   }
 
   if (report === "grand-livre" || report === "journal" || report === "operations") {
-    const { data } = await supabase.from("v_ledger_lines").select("date, journal_code, entry_number, account_number, account_label, label, reference, debit, credit").eq("organization_id", orgId).eq("fiscal_year_id", fy.id).eq("status", "posted")
-      .order(report === "grand-livre" ? "account_number" : "journal_code").order("date").order("entry_number").limit(50000);
-    const rows = (data ?? []) as Record<string, string | number | null>[];
+    const rows = await fetchAll<Record<string, string | number | null>>((a, b) =>
+      supabase.from("v_ledger_lines").select("date, journal_code, entry_number, account_number, account_label, label, reference, debit, credit").eq("organization_id", orgId).eq("fiscal_year_id", fy.id).eq("status", "posted")
+        .order(report === "grand-livre" ? "account_number" : "journal_code").order("date").order("entry_number").order("line_no").range(a, b));
     return [{
       title: `${report === "grand-livre" ? "Grand livre" : "Journal général"} — ${fy.label}`,
       columns: [
@@ -103,9 +104,9 @@ export async function buildFec(orgId: string, fy: FiscalYear): Promise<string> {
   const supabase = await createClient();
   const { data: journals } = await supabase.from("journals").select("code, label").eq("organization_id", orgId);
   const jl = new Map((journals ?? []).map((j) => [j.code as string, j.label as string]));
-  const { data } = await supabase.from("journal_entries")
+  const data = await fetchAll((a, b) => supabase.from("journal_entries")
     .select("date, entry_number, label, reference, posted_at, journals(code), entry_lines(line_no, label, debit, credit, accounts(number, label))")
-    .eq("organization_id", orgId).eq("fiscal_year_id", fy.id).eq("status", "posted").order("date").order("entry_number").limit(50000);
+    .eq("organization_id", orgId).eq("fiscal_year_id", fy.id).eq("status", "posted").order("date").order("entry_number").order("id").range(a, b));
   const header = ["JournalCode", "JournalLib", "EcritureNum", "EcritureDate", "CompteNum", "CompteLib", "CompAuxNum", "CompAuxLib", "PieceRef", "PieceDate", "EcritureLib", "Debit", "Credit", "EcritureLet", "DateLet", "ValidDate", "Montantdevise", "Idevise"];
   const clean = (s: string | null | undefined) => (s ?? "").replace(/[\t\r\n|]/g, " ").trim();
   const out = [header.join("\t")];

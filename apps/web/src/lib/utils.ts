@@ -19,8 +19,15 @@ export const fmtDateNum = (d: string | Date) => DATE_NUM.format(asDate(d));
 export const fmtMonth = (d: string | Date) => MONTH.format(asDate(d)).replace(".", "");
 export const fmtMonthLong = (d: string | Date) => MONTH_LONG.format(asDate(d));
 
+/** Date du jour à Paris (et non en UTC : à 0 h 30 en France, l'UTC est encore la veille). */
 export function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  return new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Paris" }).format(new Date());
+}
+
+/** N'accepte qu'un chemin interne au site, pour éviter toute redirection vers un site tiers. */
+export function safeNextPath(raw: string | null | undefined, fallback = "/app"): string {
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//") || raw.startsWith("/\\") || /[\u0000-\u001f]/.test(raw)) return fallback;
+  return raw;
 }
 
 export function addDaysISO(iso: string, days: number): string {

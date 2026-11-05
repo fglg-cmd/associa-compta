@@ -2,6 +2,7 @@ import Link from "next/link";
 import { buildLedger } from "@associa/accounting";
 import { getOrgContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { fetchAll } from "@/lib/fetch-all";
 import { getAccounts, getFiscalYears, getJournals, getTrialBalance, resolveFiscalYear } from "@/modules/accounting/queries";
 import { PageHeader, Amount } from "@/components/ui/misc";
 import { Card } from "@/components/ui/card";
@@ -68,9 +69,11 @@ export default async function AccountingPage({ params, searchParams }: { params:
   }
 
   if (tab === "grand-livre") {
-    let q = supabase.from("v_ledger_lines").select("account_number, account_label, date, journal_code, entry_number, label, debit, credit").eq("organization_id", org.id).eq("fiscal_year_id", fy.id).eq("status", "posted");
-    if (sp.compte) q = q.eq("account_id", sp.compte);
-    const { data } = await q.order("account_number").order("date").limit(5000);
+    const data = await fetchAll((a, b) => {
+      let q = supabase.from("v_ledger_lines").select("account_number, account_label, date, journal_code, entry_number, label, debit, credit").eq("organization_id", org.id).eq("fiscal_year_id", fy.id).eq("status", "posted");
+      if (sp.compte) q = q.eq("account_id", sp.compte);
+      return q.order("account_number").order("date").order("entry_number").order("line_no").range(a, b);
+    }, 20_000);
     const ledger = buildLedger(((data ?? []) as Record<string, unknown>[]).map((l) => ({
       accountNumber: l.account_number as string, accountLabel: l.account_label as string, date: l.date as string, journalCode: l.journal_code as string,
       entryNumber: l.entry_number as number | null, label: l.label as string, debit: Number(l.debit), credit: Number(l.credit),
@@ -106,7 +109,7 @@ export default async function AccountingPage({ params, searchParams }: { params:
 
   if (tab === "journaux") {
     const jid = sp.journal ?? journals[0]?.id;
-    const { data } = await supabase.from("v_ledger_lines").select("entry_id, date, entry_number, account_number, account_label, label, debit, credit").eq("organization_id", org.id).eq("fiscal_year_id", fy.id).eq("journal_id", jid).eq("status", "posted").order("date").order("entry_number").order("line_no").limit(5000);
+    const data = await fetchAll((a, b) => supabase.from("v_ledger_lines").select("entry_id, date, entry_number, account_number, account_label, label, debit, credit").eq("organization_id", org.id).eq("fiscal_year_id", fy.id).eq("journal_id", jid!).eq("status", "posted").order("date").order("entry_number").order("line_no").range(a, b), 20_000);
     const lines = (data ?? []) as Record<string, unknown>[];
     const td = lines.reduce((t, l) => t + Number(l.debit), 0);
     content = (

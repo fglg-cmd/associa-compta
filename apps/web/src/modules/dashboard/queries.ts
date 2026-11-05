@@ -1,6 +1,7 @@
 import "server-only";
 import { detectAnomalies, forecastTreasury, type MonthlyFlow, type TxForAnalysis } from "@associa/accounting";
 import { createClient } from "@/lib/supabase/server";
+import { fetchAll } from "@/lib/fetch-all";
 import type { FiscalYear } from "@/lib/types";
 import { addDaysISO, todayISO } from "@/lib/utils";
 import { getBankAccounts, getStatements, getTreasury } from "../accounting/queries";
@@ -20,9 +21,9 @@ export async function getDashboard(orgId: string, fy: FiscalYear) {
     getStatements(orgId, fy, today),
     supabase.rpc("monthly_flows", { p_org: orgId, p_from: from12, p_to: today }),
     getBankAccounts(orgId),
-    supabase.from("bank_transactions").select("id, date, label, amount, status").eq("organization_id", orgId).gte("date", addDaysISO(today, -365)).order("date", { ascending: false }).limit(2000),
-    supabase.from("documents").select("bank_transaction_id, entry_id").eq("organization_id", orgId),
-    supabase.from("member_fees").select("id, label, amount_due, amount_paid, due_date, status, members(first_name, last_name)").eq("organization_id", orgId).in("status", ["due", "partial"]).order("due_date"),
+    fetchAll((a, b) => supabase.from("bank_transactions").select("id, date, label, amount, status").eq("organization_id", orgId).gte("date", addDaysISO(today, -365)).order("date", { ascending: false }).order("id").range(a, b), 20_000).then((data) => ({ data })),
+    fetchAll((a, b) => supabase.from("documents").select("bank_transaction_id, entry_id").eq("organization_id", orgId).order("id").range(a, b), 50_000).then((data) => ({ data })),
+    fetchAll((a, b) => supabase.from("member_fees").select("id, label, amount_due, amount_paid, due_date, status, members(first_name, last_name)").eq("organization_id", orgId).in("status", ["due", "partial"]).order("due_date").order("id").range(a, b), 50_000).then((data) => ({ data })),
     supabase.from("projects").select("id, name, kind, start_date, end_date, status").eq("organization_id", orgId).neq("status", "closed"),
     supabase.from("journal_entries").select("id, date, label, source, entry_lines(debit, credit, accounts(number))").eq("organization_id", orgId).eq("status", "posted").order("date", { ascending: false }).order("created_at", { ascending: false }).limit(8),
     Promise.all([
@@ -47,7 +48,7 @@ export async function getDashboard(orgId: string, fy: FiscalYear) {
     if (d.entry_id) docEntries.add(d.entry_id);
   }
   const txs = (txRes.data ?? []) as { id: string; date: string; label: string; amount: number; status: TxForAnalysis["status"] }[];
-  const { data: txEntries } = await supabase.from("bank_transactions").select("id, entry_id").eq("organization_id", orgId).not("entry_id", "is", null);
+  const txEntries = await fetchAll((a, b) => supabase.from("bank_transactions").select("id, entry_id").eq("organization_id", orgId).not("entry_id", "is", null).order("id").range(a, b), 50_000);
   const entryByTx = new Map(((txEntries ?? []) as { id: string; entry_id: string }[]).map((t) => [t.id, t.entry_id]));
 
   // Écart de rapprochement cumulé sur les comptes bancaires

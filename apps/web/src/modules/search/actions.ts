@@ -17,7 +17,9 @@ export async function globalSearch(slug: string, query: string): Promise<SearchH
   if (q.length < 2) return [];
   const { org } = await getOrgContext(slug);
   const supabase = await createClient();
-  const like = `%${q.replace(/[%_\\]/g, (c) => `\\${c}`)}%`;
+  const term = q.replace(/[%_,().*\\"]/g, " ").replace(/\s+/g, " ").trim();
+  if (term.length < 2) return [];
+  const like = `%${term}%`;
   const base = `/app/${slug}`;
 
   const [members, docs, txs, entries, projects] = await Promise.all([

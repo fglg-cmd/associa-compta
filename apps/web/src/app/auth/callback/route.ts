@@ -1,12 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { safeNextPath } from "@/lib/utils";
 
 /** Retour OAuth / lien magique / confirmation e-mail (flux PKCE). */
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
   const code = searchParams.get("code");
   const rawNext = searchParams.get("next") ?? "/app";
-  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/app";
+  const next = safeNextPath(rawNext);
 
   if (code) {
     const supabase = await createClient();

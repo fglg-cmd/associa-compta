@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Mail } from "lucide-react";
 import { getBrowserClient } from "@/lib/supabase/browser";
 import { publicEnv } from "@/lib/public-env";
+import { safeNextPath } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 
@@ -31,7 +32,7 @@ function MicrosoftIcon() {
 export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
   const router = useRouter();
   const params = useSearchParams();
-  const next = params.get("next")?.startsWith("/") ? params.get("next")! : "/app";
+  const next = safeNextPath(params.get("next"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");

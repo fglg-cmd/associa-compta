@@ -7,7 +7,12 @@ const date = (d: unknown) => (typeof d === "string" && /^\d{4}-\d{2}-\d{2}/.test
 
 /** CSV français : séparateur « ; », décimales « , », BOM UTF-8 pour Excel. */
 export function toCsv(tables: Table[]): string {
-  const esc = (v: string) => (/[;"\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+  // Un libellé comme « =HYPERLINK(...) » serait exécuté par Excel : on le neutralise.
+  const defuse = (v: string) => (/^[=+\-@\t\r]/.test(v) && !/^-?\d+([.,]\d+)?$/.test(v) ? `'${v}` : v);
+  const esc = (raw: string) => {
+    const v = defuse(raw);
+    return /[;"\n\r]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+  };
   const parts: string[] = [];
   for (const t of tables) {
     if (tables.length > 1) parts.push(esc(t.title));

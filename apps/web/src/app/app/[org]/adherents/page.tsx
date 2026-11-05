@@ -3,6 +3,7 @@ import { Users } from "lucide-react";
 import { getOrgContext } from "@/lib/auth";
 import { features } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
+import { fetchAll } from "@/lib/fetch-all";
 import { getAccounts } from "@/modules/accounting/queries";
 import { PageHeader, EmptyState, Amount } from "@/components/ui/misc";
 import { Card } from "@/components/ui/card";
@@ -20,12 +21,17 @@ export default async function MembersPage({ params, searchParams }: { params: Pr
   const { org, canWrite } = await getOrgContext(slug);
   const supabase = await createClient();
 
-  let q = supabase.from("members").select("*").eq("organization_id", org.id);
-  if (sp.statut) q = q.eq("status", sp.statut);
-  if (sp.q) q = q.or(`last_name.ilike.%${sp.q.replace(/[%_,()]/g, "")}%,first_name.ilike.%${sp.q.replace(/[%_,()]/g, "")}%,email.ilike.%${sp.q.replace(/[%_,()]/g, "")}%`);
+  // Requête reconstruite à chaque page (les filtres Supabase modifient l'objet en place)
+  const membersQuery = () => {
+    let q = supabase.from("members").select("*").eq("organization_id", org.id);
+    if (sp.statut) q = q.eq("status", sp.statut);
+    const term = sp.q?.replace(/[%_,().*\\]/g, "").trim();
+    if (term) q = q.or(`last_name.ilike.%${term}%,first_name.ilike.%${term}%,email.ilike.%${term}%`);
+    return q;
+  };
   const [{ data: membersData }, { data: feesData }, { data: types }, accounts] = await Promise.all([
-    q.order("last_name").order("first_name").limit(1000),
-    supabase.from("member_fees").select("id, member_id, label, amount_due, amount_paid, status, due_date").eq("organization_id", org.id).neq("status", "cancelled"),
+    fetchAll((a, b) => membersQuery().order("last_name").order("first_name").order("id").range(a, b), 100_000).then((data) => ({ data })),
+    fetchAll((a, b) => supabase.from("member_fees").select("id, member_id, label, amount_due, amount_paid, status, due_date").eq("organization_id", org.id).neq("status", "cancelled").order("id").range(a, b), 200_000).then((data) => ({ data })),
     supabase.from("fee_types").select("*").eq("organization_id", org.id).eq("is_active", true).order("label"),
     getAccounts(org.id),
   ]);
