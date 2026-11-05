@@ -26,8 +26,8 @@ export const PLANS: Record<PlanTier, PlanDef> = {
     tagline: "Pour démarrer sereinement",
     monthly: 0,
     yearly: 0,
-    limits: { bankAccounts: 1, documents: 100, members: 50, aiMessagesPerMonth: 20, seats: 2 },
-    features: ["1 compte bancaire", "Import CSV, OFX, QIF", "Comptabilité en partie double", "Compte de résultat et bilan", "50 adhérents", "100 justificatifs", "20 questions à l'assistant / mois"],
+    limits: { bankAccounts: 1, documents: 100, members: 50, aiMessagesPerMonth: 10, seats: 2 },
+    features: ["1 compte bancaire", "Import CSV, OFX, QIF", "Comptabilité en partie double", "Compte de résultat et bilan", "50 adhérents", "100 justificatifs", "10 questions à l'assistant / mois"],
   },
   essential: {
     tier: "essential",
@@ -35,8 +35,8 @@ export const PLANS: Record<PlanTier, PlanDef> = {
     tagline: "Pour les associations actives",
     monthly: 900,
     yearly: 9000,
-    limits: { bankAccounts: 3, documents: 2000, members: 500, aiMessagesPerMonth: 200, seats: 5 },
-    features: ["3 comptes bancaires", "500 adhérents et relances automatiques", "2 000 justificatifs avec OCR", "Projets et événements", "Exports PDF et Excel", "200 questions à l'assistant / mois", "5 membres du bureau"],
+    limits: { bankAccounts: 3, documents: 2000, members: 500, aiMessagesPerMonth: 50, seats: 5 },
+    features: ["3 comptes bancaires", "500 adhérents et relances automatiques", "2 000 justificatifs avec OCR", "Projets et événements", "Exports PDF et Excel", "50 questions à l'assistant / mois", "5 membres du bureau"],
   },
   pro: {
     tier: "pro",
@@ -44,8 +44,8 @@ export const PLANS: Record<PlanTier, PlanDef> = {
     tagline: "Pour les fédérations et structures employeuses",
     monthly: 1900,
     yearly: 19000,
-    limits: { bankAccounts: 50, documents: 100000, members: 100000, aiMessagesPerMonth: 2000, seats: 50 },
-    features: ["Comptes bancaires illimités", "Adhérents illimités", "Justificatifs illimités", "Assistant IA étendu", "Accès commissaire aux comptes", "Support prioritaire"],
+    limits: { bankAccounts: 50, documents: 100000, members: 100000, aiMessagesPerMonth: 300, seats: 50 },
+    features: ["Comptes bancaires illimités", "Adhérents illimités", "Justificatifs illimités", "300 questions à l'assistant / mois", "Accès commissaire aux comptes", "Support prioritaire"],
   },
 };
 

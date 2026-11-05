@@ -77,8 +77,8 @@ conforme au plan comptable associatif.
 ### Modèle économique
 | Plan | Prix | Cible | Limites |
 |---|---|---|---|
-| Découverte | 0 € | moins de 50 adhérents | 1 compte bancaire, 100 documents, 20 messages IA par mois |
-| Essentiel | 9 €/mois HT | association de quartier, club | 3 comptes, 2 000 documents, 200 messages IA |
+| Découverte | 0 € | moins de 50 adhérents | 1 compte bancaire, 100 documents, 10 questions IA par mois |
+| Essentiel | 9 €/mois HT | association de quartier, club | 3 comptes, 2 000 documents, 50 questions IA |
 | Pro | 19 €/mois HT | fédérations, associations employeuses | illimité, multi-utilisateurs avancé, export FEC |
 
 ---
