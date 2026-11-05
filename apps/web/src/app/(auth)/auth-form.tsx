@@ -169,7 +169,7 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
         <Button type="submit" variant="primary" size="lg" loading={loading === "email"} disabled={!!loading}>
           {mode === "signin" ? "Se connecter" : "Créer mon compte"}
         </Button>
-        {mode === "signin" && (
+        {mode === "signin" && publicEnv.authEmails && (
           <Button type="button" variant="ghost" onClick={magicLink} loading={loading === "magic"} disabled={!!loading}>
             Recevoir un lien de connexion par e-mail
           </Button>

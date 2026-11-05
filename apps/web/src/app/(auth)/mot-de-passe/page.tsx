@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { getBrowserClient } from "@/lib/supabase/browser";
+import { publicEnv } from "@/lib/public-env";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 
@@ -25,7 +26,11 @@ export default function ForgotPasswordPage() {
   return (
     <div className="rounded-xl border border-border bg-surface p-6 shadow-sm">
       <h1 className="text-lg font-semibold">Mot de passe oublié</h1>
-      {state === "sent" ? (
+      {!publicEnv.authEmails ? (
+        <p className="mt-2 text-sm text-muted">
+          Écrivez-nous à <a className="font-medium text-accent" href={`mailto:${publicEnv.supportEmail}?subject=${encodeURIComponent("Réinitialisation de mot de passe")}`}>{publicEnv.supportEmail}</a> depuis l&apos;adresse de votre compte : nous vous envoyons un lien de réinitialisation sous 24 h.
+        </p>
+      ) : state === "sent" ? (
         <p className="mt-2 text-sm text-muted">Si un compte existe pour {email}, un lien de réinitialisation vient d&apos;être envoyé.</p>
       ) : (
         <form onSubmit={submit} className="mt-4 grid gap-3">

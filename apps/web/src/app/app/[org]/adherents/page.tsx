@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Users } from "lucide-react";
 import { getOrgContext } from "@/lib/auth";
+import { features } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import { getAccounts } from "@/modules/accounting/queries";
 import { PageHeader, EmptyState, Amount } from "@/components/ui/misc";
@@ -63,7 +64,7 @@ export default async function MembersPage({ params, searchParams }: { params: Pr
         actions={canWrite && (
           <>
             <ImportMembersDialog orgId={org.id} />
-            <FeesToolbar orgId={org.id} feeTypes={(types ?? []) as FeeType[]} accounts={accounts.filter((a) => a.number.startsWith("7")).map((a) => ({ id: a.id, number: a.number, label: a.label, is_active: a.is_active }))} overdueCount={overdueCount} />
+            <FeesToolbar orgId={org.id} feeTypes={(types ?? []) as FeeType[]} accounts={accounts.filter((a) => a.number.startsWith("7")).map((a) => ({ id: a.id, number: a.number, label: a.label, is_active: a.is_active }))} overdueCount={features.email ? overdueCount : 0} />
             <MemberDialog orgId={org.id} defaultOpen={sp.action === "ajouter"} />
           </>
         )}

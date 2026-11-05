@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, Mail, MapPin, Phone } from "lucide-react";
 import { getOrgContext } from "@/lib/auth";
+import { features } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import { getBankAccounts } from "@/modules/accounting/queries";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -82,6 +83,7 @@ export default async function MemberPage({ params }: { params: Promise<{ org: st
                         orgId={org.id}
                         fee={{ id: f.id, label: f.label, remaining: f.amount_due - f.amount_paid }}
                         hasEmail={Boolean(member.email)}
+                        emailEnabled={features.email}
                         bankAccounts={banks.filter((b) => !b.is_archived).map((b) => ({ id: b.id, name: b.name }))}
                         pendingTx={(pendingTx ?? []) as { id: string; date: string; label: string; amount: number }[]}
                       />

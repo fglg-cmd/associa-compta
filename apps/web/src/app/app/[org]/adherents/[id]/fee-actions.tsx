@@ -12,7 +12,7 @@ import { Field, Input, Select } from "@/components/ui/input";
 import type { FeeType } from "@/lib/types";
 import { fmtDateShort, todayISO } from "@/lib/utils";
 
-export function FeeActions({ orgId, fee, hasEmail, bankAccounts, pendingTx }: { orgId: string; fee: { id: string; label: string; remaining: number }; hasEmail: boolean; bankAccounts: { id: string; name: string }[]; pendingTx: { id: string; date: string; label: string; amount: number }[] }) {
+export function FeeActions({ orgId, fee, hasEmail, emailEnabled, bankAccounts, pendingTx }: { orgId: string; fee: { id: string; label: string; remaining: number }; hasEmail: boolean; emailEnabled: boolean; bankAccounts: { id: string; name: string }[]; pendingTx: { id: string; date: string; label: string; amount: number }[] }) {
   const [open, setOpen] = useState(false);
   const [method, setMethod] = useState<"transfer" | "cash" | "cheque" | "card" | "other">("transfer");
   const [txId, setTxId] = useState("");
@@ -91,9 +91,9 @@ export function FeeActions({ orgId, fee, hasEmail, bankAccounts, pendingTx }: { 
       <DropdownMenu>
         <DropdownMenuTrigger asChild><Button size="icon-sm" variant="ghost" aria-label="Plus d'actions"><MoreHorizontal /></Button></DropdownMenuTrigger>
         <DropdownMenuContent>
-          <DropdownMenuItem disabled={!hasEmail || pending} onSelect={() => act(async () => { const r = await sendReminders(orgId, [fee.id]); return r.ok && r.data.sent === 0 ? { ok: false, error: "Déjà relancé dans les 7 derniers jours." } : r; }, "Relance envoyée")}>
+          {emailEnabled && (<DropdownMenuItem disabled={!hasEmail || pending} onSelect={() => act(async () => { const r = await sendReminders(orgId, [fee.id]); return r.ok && r.data.sent === 0 ? { ok: false, error: "Déjà relancé dans les 7 derniers jours." } : r; }, "Relance envoyée")}>
             <BellRing /> {hasEmail ? "Envoyer une relance" : "Relance (e-mail manquant)"}
-          </DropdownMenuItem>
+          </DropdownMenuItem>)}
           <DropdownMenuItem destructive onSelect={() => act(() => cancelFee(orgId, fee.id), "Cotisation annulée")}><XCircle /> Annuler la cotisation</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
