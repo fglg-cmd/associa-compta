@@ -4,12 +4,20 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "./supabase/server";
 import type { Organization, OrgRole } from "./types";
 
-export const getSessionUser = cache(async () => {
+export interface SessionUser {
+  id: string;
+  email: string | undefined;
+}
+
+/**
+ * Utilisateur connecté. Le jeton est vérifié localement (signature ES256, clés publiques
+ * mises en cache) : pas d'aller-retour vers le serveur d'authentification à chaque page.
+ */
+export const getSessionUser = cache(async (): Promise<SessionUser | null> => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  return user;
+  const { data, error } = await supabase.auth.getClaims();
+  if (error || !data?.claims?.sub) return null;
+  return { id: data.claims.sub, email: typeof data.claims.email === "string" ? data.claims.email : undefined };
 });
 
 export async function requireUser() {
@@ -30,15 +38,15 @@ export interface OrgContext {
 export const getOrgContext = cache(async (slug: string): Promise<OrgContext> => {
   const user = await requireUser();
   const supabase = await createClient();
-  const { data: org } = await supabase.from("organizations").select("*").eq("slug", slug).maybeSingle<Organization>();
-  if (!org) notFound();
+  // Une seule requête : l'adhésion de l'utilisateur et son association (jointure interne).
   const { data: m } = await supabase
     .from("memberships")
-    .select("role")
-    .eq("organization_id", org.id)
+    .select("role, organizations!inner(*)")
     .eq("user_id", user.id)
-    .maybeSingle<{ role: OrgRole }>();
+    .eq("organizations.slug", slug)
+    .maybeSingle<{ role: OrgRole; organizations: Organization }>();
   if (!m) notFound();
+  const org = m.organizations;
   return {
     org,
     role: m.role,

@@ -19,9 +19,9 @@ export async function updateSession(request: NextRequest) {
     },
   });
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Vérification locale du jeton (et rafraîchissement s'il a expiré), sans appel réseau.
+  const { data } = await supabase.auth.getClaims();
+  const user = data?.claims?.sub ? data.claims : null;
 
   const path = request.nextUrl.pathname;
   if (!user && PROTECTED.some((re) => re.test(path))) {
