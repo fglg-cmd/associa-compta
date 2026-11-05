@@ -5,9 +5,11 @@
 -- RLS : un utilisateur ne voit que les organisations dont il est membre.
 -- =============================================================================
 
-create extension if not exists pgcrypto;
-create extension if not exists btree_gist;
-create extension if not exists unaccent;
+-- Extensions dans le schéma « extensions » (convention Supabase)
+create schema if not exists extensions;
+create extension if not exists pgcrypto with schema extensions;
+create extension if not exists btree_gist with schema extensions;
+create extension if not exists unaccent with schema extensions;
 
 create type public.org_role as enum ('owner', 'admin', 'treasurer', 'member', 'viewer');
 create type public.plan_tier as enum ('free', 'essential', 'pro');
@@ -92,7 +94,7 @@ create table public.invitations (
   organization_id  uuid not null references public.organizations (id) on delete cascade,
   email            text not null,
   role             public.org_role not null default 'member' check (role <> 'owner'),
-  token            text not null unique default encode(gen_random_bytes(24), 'hex'),
+  token            text not null unique default encode(extensions.gen_random_bytes(24), 'hex'),
   invited_by       uuid references auth.users (id) on delete set null,
   expires_at       timestamptz not null default now() + interval '14 days',
   accepted_at      timestamptz,

@@ -14,6 +14,7 @@ back-office SaaS.
 | [`docs/02-ARCHITECTURE.md`](docs/02-ARCHITECTURE.md) | Organisation du code, conventions, flux de données, sécurité |
 | [`docs/03-EXPLOITATION.md`](docs/03-EXPLOITATION.md) | Installation, configuration, déploiement, check-list de lancement |
 | [`docs/04-ETAT.md`](docs/04-ETAT.md) | État exact : ce qui est livré, testé, à vérifier, à venir |
+| [`docs/05-LANCEMENT.md`](docs/05-LANCEMENT.md) | **Mettre le site en ligne et vendre (guide fondateur)** |
 
 ## Démarrage rapide (développement)
 

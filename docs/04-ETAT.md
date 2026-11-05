@@ -26,6 +26,23 @@ justificatifs, etc.) n'ont donc **pas été cliqués dans un navigateur contre u
 Supabase**. La suite Playwright `apps/web/e2e/journey.spec.ts` couvre ce parcours. Elle
 doit être lancée **avant le lancement** (voir `docs/03-EXPLOITATION.md` §5).
 
+### Base de production Supabase (5 novembre 2026)
+
+Les migrations 0001 à 0010 sont appliquées sur le projet `fglg-associa-compta`.
+
+Deux scénarios complets ont été exécutés directement sur la base de production, dans une
+transaction annulée, ce qui ne laisse aucune donnée. Résultat : **OK**.
+
+Ils couvrent :
+- la création d'une association ;
+- la banque : comptabilisation, contre-passation, recomptabilisation et rapprochement exact ;
+- les cotisations ;
+- la balance équilibrée et la piste d'audit ;
+- l'isolation entre deux utilisateurs ;
+- le blocage de l'anonyme et des fonctions internes.
+
+Côté droits, 28 fonctions métier sont ouvertes aux utilisateurs connectés et 0 à l'anonyme.
+
 ## Modules
 
 | Module | État | Détail |

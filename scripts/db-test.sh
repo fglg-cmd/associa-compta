@@ -9,6 +9,7 @@ DB="associa_test_$$"
 psql "$ADMIN_URL" -q -c "create database $DB" >/dev/null
 trap 'psql "$ADMIN_URL" -q -c "drop database if exists $DB" >/dev/null' EXIT
 URL="${ADMIN_URL%/*}/$DB"
+psql "$ADMIN_URL" -q -c "alter database $DB set search_path = public, extensions" >/dev/null
 psql "$URL" -q -v ON_ERROR_STOP=1 -f "$ROOT/supabase/tests/_supabase_stub.sql" >/dev/null
 for f in "$ROOT"/supabase/migrations/*.sql; do
   psql "$URL" -q -v ON_ERROR_STOP=1 -f "$f" >/dev/null || { echo "✗ migration $(basename "$f")"; exit 1; }

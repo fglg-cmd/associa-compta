@@ -9,7 +9,7 @@ create type public.ocr_status as enum ('pending', 'processing', 'done', 'failed'
 
 create text search configuration public.fr_unaccent (copy = pg_catalog.french);
 alter text search configuration public.fr_unaccent
-  alter mapping for hword, hword_part, word with unaccent, french_stem;
+  alter mapping for hword, hword_part, word with extensions.unaccent, french_stem;
 
 create table public.documents (
   id                   uuid primary key default gen_random_uuid(),
@@ -57,7 +57,7 @@ as $$
   where d.organization_id = p_org
     and (
       d.search @@ websearch_to_tsquery('public.fr_unaccent', p_query)
-      or unaccent(lower(d.name)) like '%' || unaccent(lower(p_query)) || '%'
+      or extensions.unaccent(lower(d.name)) like '%' || extensions.unaccent(lower(p_query)) || '%'
     )
   order by ts_rank(d.search, websearch_to_tsquery('public.fr_unaccent', p_query)) desc, d.created_at desc
   limit least(greatest(p_limit, 1), 200);

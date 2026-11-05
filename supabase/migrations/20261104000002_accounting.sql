@@ -33,7 +33,7 @@ create table public.fiscal_years (
   check (end_date > start_date),
   check (end_date - start_date <= 731), -- 24 mois maximum (premier exercice)
   exclude using gist (
-    organization_id with =,
+    organization_id extensions.gist_uuid_ops with =,
     daterange(start_date, end_date, '[]') with &&
   )
 );
