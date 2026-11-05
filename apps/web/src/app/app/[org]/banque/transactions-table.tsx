@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, EyeOff, Link2, Paperclip, RotateCcw, Sparkles, Undo2, Inbox } from "lucide-react";
@@ -52,6 +52,22 @@ export function TransactionsTable({
   const [choice, setChoice] = useState<Record<string, { accountId: string; projectId: string }>>(() =>
     Object.fromEntries(transactions.map((t) => [t.id, { accountId: t.suggested_account_id ?? "", projectId: t.suggested_project_id ?? "" }])),
   );
+  // Après un import ou une navigation, la liste change sans que le composant soit recréé :
+  // on complète les choix avec les suggestions des nouveaux mouvements.
+  useEffect(() => {
+    setChoice((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const t of transactions) {
+        const cur = next[t.id];
+        if (!cur || (!cur.accountId && t.suggested_account_id)) {
+          next[t.id] = { accountId: t.suggested_account_id ?? cur?.accountId ?? "", projectId: cur?.projectId || t.suggested_project_id || "" };
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [transactions]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [learn, setLearn] = useState(true);
   const [matching, setMatching] = useState<{ tx: Tx; candidates: MatchCandidate[] } | null>(null);
