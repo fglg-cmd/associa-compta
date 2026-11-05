@@ -55,7 +55,20 @@ function streamAnthropic({ system, context, messages, maxTokens = 16000 }: Param
     outputTokens: msg.usage.output_tokens ?? 0,
     refused: msg.stop_reason === "refusal",
   }));
+  // Évite qu'un échec de l'API (déjà remonté par le flux) ne fasse planter le serveur
+  done.catch(() => {});
   return { stream, done };
+}
+
+/** Code lisible d'une erreur de fournisseur IA (sans donnée sensible). */
+export function aiErrorCode(e: unknown): string {
+  const err = e as { status?: number; error?: { error?: { type?: string; message?: string } }; message?: string };
+  const type = err?.error?.error?.type;
+  const msg = err?.error?.error?.message ?? err?.message ?? "";
+  if (/credit balance/i.test(msg)) return "crédit Anthropic épuisé";
+  if (err?.status === 401) return "clé API invalide";
+  if (err?.status === 429) return "trop de requêtes";
+  return [err?.status, type].filter(Boolean).join(" ") || "inconnu";
 }
 
 function streamOpenAI({ system, context, messages, maxTokens = 8000 }: Parameters<typeof streamChat>[0]): StreamResult {

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireOrgMember } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { features } from "@/lib/env";
-import { streamChat, type ChatTurn } from "@/lib/ai";
+import { aiErrorCode, streamChat, type ChatTurn } from "@/lib/ai";
 import { planOf } from "@/lib/plans";
 import { track } from "@/lib/analytics";
 import { buildFinancialContext } from "@/modules/ai/context";
@@ -89,7 +89,10 @@ export async function POST(req: NextRequest) {
         await track("ai_message", org.id, { mode: body.mode, provider: meta.provider, output_tokens: meta.outputTokens });
       } catch (e) {
         console.error("[ai]", e);
-        controller.enqueue(encoder.encode(full ? "\n\n_(Réponse interrompue, réessayez.)_" : "Le service d'IA est momentanément indisponible. Réessayez dans un instant."));
+        const code = aiErrorCode(e);
+        const msg = full ? "\n\n_(Réponse interrompue, réessayez.)_" : `Le service d'IA est momentanément indisponible (${code}). Réessayez dans un instant.`;
+        controller.enqueue(encoder.encode(msg));
+        await supabase.from("ai_messages").insert({ organization_id: org.id, conversation_id: conversationId, role: "assistant", content: full + msg, provider: "error", model: code.slice(0, 60) });
       } finally {
         controller.close();
       }
