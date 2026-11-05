@@ -8,6 +8,8 @@ export const publicEnv = {
     (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "") ||
     "http://localhost:3000"
   ).replace(/\/$/, ""),
+  /** Fournisseurs OAuth activés dans Supabase, ex. "google,azure". Vide = connexion par e-mail uniquement. */
+  authProviders: (process.env.NEXT_PUBLIC_AUTH_PROVIDERS ?? "").split(",").map((s) => s.trim()).filter(Boolean),
   posthogKey: process.env.NEXT_PUBLIC_POSTHOG_KEY ?? "",
   posthogHost: process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://eu.i.posthog.com",
   sentryDsn: process.env.NEXT_PUBLIC_SENTRY_DSN ?? "",

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Mail } from "lucide-react";
 import { getBrowserClient } from "@/lib/supabase/browser";
+import { publicEnv } from "@/lib/public-env";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 
@@ -120,18 +121,26 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
         {mode === "signin" ? "Connectez-vous à votre espace trésorier." : "Sans carte bancaire. Prêt en deux minutes."}
       </p>
 
-      <div className="mt-5 grid gap-2">
-        <Button size="lg" onClick={() => oauth("google")} loading={loading === "google"} disabled={!!loading}>
-          <GoogleIcon /> Continuer avec Google
-        </Button>
-        <Button size="lg" onClick={() => oauth("azure")} loading={loading === "azure"} disabled={!!loading}>
-          <MicrosoftIcon /> Continuer avec Microsoft
-        </Button>
-      </div>
-
-      <div className="my-5 flex items-center gap-3 text-xs text-subtle">
-        <div className="h-px flex-1 bg-border" /> ou par e-mail <div className="h-px flex-1 bg-border" />
-      </div>
+      {publicEnv.authProviders.length > 0 && (
+        <>
+          <div className="mt-5 grid gap-2">
+            {publicEnv.authProviders.includes("google") && (
+              <Button size="lg" onClick={() => oauth("google")} loading={loading === "google"} disabled={!!loading}>
+                <GoogleIcon /> Continuer avec Google
+              </Button>
+            )}
+            {publicEnv.authProviders.includes("azure") && (
+              <Button size="lg" onClick={() => oauth("azure")} loading={loading === "azure"} disabled={!!loading}>
+                <MicrosoftIcon /> Continuer avec Microsoft
+              </Button>
+            )}
+          </div>
+          <div className="my-5 flex items-center gap-3 text-xs text-subtle">
+            <div className="h-px flex-1 bg-border" /> ou par e-mail <div className="h-px flex-1 bg-border" />
+          </div>
+        </>
+      )}
+      {publicEnv.authProviders.length === 0 && <div className="mt-5" />}
 
       <form onSubmit={submit} className="grid gap-3">
         {mode === "signup" && (
