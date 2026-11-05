@@ -43,6 +43,25 @@ Ils couvrent :
 
 Côté droits, 28 fonctions métier sont ouvertes aux utilisateurs connectés et 0 à l'anonyme.
 
+### Production en ligne (5 novembre 2026)
+
+Le site est en ligne sur https://associa-compta.vercel.app, avec déploiement automatique à
+chaque envoi sur la branche `main`.
+
+Vérifications faites avec un vrai compte :
+- inscription confirmée par e-mail ;
+- création de l'association, avec ses 101 comptes, son compte bancaire et son exercice ;
+- accès au back-office.
+
+**Stripe en mode test, validé de bout en bout :** paiement de l'offre Essentielle annuelle
+avec la carte 4242, webhook reçu (2 événements), association passée en offre Essentielle.
+
+Il reste à brancher :
+- Resend (e-mails vers tous les destinataires) ;
+- Anthropic (assistant IA) ;
+- le passage de Stripe en mode réel ;
+- le nom de domaine et les mentions légales.
+
 ## Modules
 
 | Module | État | Détail |
