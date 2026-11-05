@@ -27,7 +27,11 @@ export function streamChat(params: { system: string; context: string; messages: 
 }
 
 function streamAnthropic({ system, context, messages, maxTokens = 16000 }: Parameters<typeof streamChat>[0]): StreamResult {
-  anthropic ??= new Anthropic({ apiKey: serverEnv.anthropicApiKey });
+  anthropic ??= new Anthropic({
+    apiKey: serverEnv.anthropicApiKey,
+    // Clé non rattachée à un espace de travail : l'identifiant de l'espace est alors requis
+    defaultHeaders: serverEnv.anthropicWorkspaceId ? { "anthropic-workspace-id": serverEnv.anthropicWorkspaceId } : undefined,
+  });
   const model = serverEnv.aiModel;
   const s = anthropic.beta.messages.stream({
     model,
@@ -66,6 +70,7 @@ export function aiErrorCode(e: unknown): string {
   const type = err?.error?.error?.type;
   const msg = err?.error?.error?.message ?? err?.message ?? "";
   if (/credit balance/i.test(msg)) return "crédit Anthropic épuisé";
+  if (/not scoped to a workspace/i.test(msg)) return "clé Anthropic sans espace de travail";
   if (err?.status === 401) return "clé API invalide";
   if (err?.status === 429) return "trop de requêtes";
   return [err?.status, type].filter(Boolean).join(" ") || "inconnu";

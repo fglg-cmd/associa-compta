@@ -33,6 +33,7 @@ export const serverEnv = {
   emailFrom: opt("EMAIL_FROM") ?? "ASSOCIA COMPTA <bonjour@associa-compta.fr>",
   anthropicApiKey: opt("ANTHROPIC_API_KEY"),
   aiModel: opt("AI_MODEL") ?? "claude-opus-5-5",
+  anthropicWorkspaceId: opt("ANTHROPIC_WORKSPACE_ID"),
   openaiApiKey: opt("OPENAI_API_KEY"),
   openaiModel: opt("OPENAI_MODEL") ?? "gpt-5.1",
   googleVisionApiKey: opt("GOOGLE_VISION_API_KEY"),
