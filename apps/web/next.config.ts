@@ -34,6 +34,12 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   transpilePackages: ["@associa/accounting", "@associa/bank-import"],
   serverExternalPackages: ["tesseract.js", "exceljs", "@react-pdf/renderer", "mammoth"],
+  // Fichiers chargés dynamiquement (non détectés par le traçage) : polices PDF standard
+  // et modèles OCR. Sans cela, l'export PDF échoue sur Vercel (« Cannot find module Helvetica »).
+  outputFileTracingIncludes: {
+    "/api/exports/[orgId]": ["../../node_modules/.pnpm/pdfkit@*/node_modules/pdfkit/js/**/*", "../../node_modules/.pnpm/@react-pdf+*/node_modules/@react-pdf/**/*.{js,cjs,json,afm}"],
+    "/api/documents/[id]/ocr": ["../../node_modules/.pnpm/tesseract.js*/node_modules/tesseract.js*/**/*"],
+  },
   experimental: {
     serverActions: { bodySizeLimit: "26mb" },
   },
