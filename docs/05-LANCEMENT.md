@@ -120,3 +120,17 @@ sur Excel.
 
 **Objectif réaliste :** 100 associations inscrites et 15 à 20 clientes payantes à 3 mois,
 soit environ 150 à 200 € de revenu mensuel, et une base de témoignages pour accélérer.
+
+---
+
+## Phase de lancement gratuite (active depuis le 5 novembre 2026)
+
+La variable Vercel `BETA_FREE=on` donne l'offre Pro à toutes les associations et bloque tout
+paiement. Le site affiche « Phase de lancement : tout est gratuit » et promet un préavis
+d'au moins un mois.
+
+**Passer au payant (vers 10 à 15 associations actives) :**
+1. Créer la société (SIREN), renseigner les variables `NEXT_PUBLIC_LEGAL_*`, faire relire les CGV.
+2. Prévenir les associations inscrites par e-mail, **au moins un mois avant**.
+3. Passer Stripe en mode réel : nouvelle clé secrète, nouveaux `price_…`, nouveau webhook.
+4. Le jour J : supprimer `BETA_FREE` dans Vercel (ou le passer à `off`), puis redéployer.
