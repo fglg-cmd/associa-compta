@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getOrgContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { features } from "@/lib/env";
-import { PLANS, planOf } from "@/lib/plans";
+import { PLANS, planFeatures, planOf } from "@/lib/plans";
 import { PageHeader } from "@/components/ui/misc";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -64,7 +64,7 @@ export default async function SettingsPage({ params, searchParams }: { params: P
   }
   if (tab === "abonnement") {
     const { data: sub } = await supabase.from("subscriptions").select("*").eq("organization_id", org.id).maybeSingle();
-    content = <>{sp.raison === "export" && <div className="mb-4 rounded-lg bg-accent-soft px-4 py-3 text-[13px] text-accent">Les exports Excel et PDF détaillés (balance, grand livre, journal) sont inclus dès l&apos;offre Essentiel.</div>}<BillingPanel orgId={org.id} current={org.plan} plans={Object.values(PLANS)} subscription={sub} canManage={canAdmin} billingEnabled={features.billing} success={sp.statut === "succes"} /></>;
+    content = <>{sp.raison === "export" && <div className="mb-4 rounded-lg bg-accent-soft px-4 py-3 text-[13px] text-accent">Les exports Excel et PDF détaillés (balance, grand livre, journal) sont inclus dès l&apos;offre Essentiel.</div>}<BillingPanel orgId={org.id} current={org.plan} plans={Object.values(PLANS).map((p) => ({ ...p, features: planFeatures(p, features.ai) }))} subscription={sub} canManage={canAdmin} billingEnabled={features.billing} success={sp.statut === "succes"} /></>;
   }
   if (tab === "support") {
     const { data: tickets } = await supabase.from("support_tickets").select("id, subject, status, admin_reply, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(20);

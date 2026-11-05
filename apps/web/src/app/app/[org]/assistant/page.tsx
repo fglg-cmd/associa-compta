@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getOrgContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { features } from "@/lib/env";
@@ -9,6 +10,7 @@ export const metadata = { title: "Assistant" };
 export default async function AssistantPage({ params, searchParams }: { params: Promise<{ org: string }>; searchParams: Promise<{ c?: string }> }) {
   const { org: slug } = await params;
   const { c } = await searchParams;
+  if (!features.ai) redirect(`/app/${slug}`);
   const { org, userId } = await getOrgContext(slug);
   const supabase = await createClient();
   const monthStart = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), 1)).toISOString();

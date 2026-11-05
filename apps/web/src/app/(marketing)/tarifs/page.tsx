@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Check } from "lucide-react";
 import { formatEUR } from "@associa/accounting";
-import { PLANS } from "@/lib/plans";
+import { PLANS, planFeatures } from "@/lib/plans";
+import { features } from "@/lib/env";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -13,6 +14,8 @@ const FAQ = [
   ["Recevrai-je une facture ?", "Oui, une facture conforme est émise à chaque échéance et disponible dans votre espace de facturation."],
   ["Que se passe-t-il si je résilie ?", "Votre abonnement reste actif jusqu'à la fin de la période payée, puis votre association repasse en offre Découverte, sans perte de données."],
 ];
+
+export const dynamic = "force-dynamic";
 
 export default function PricingPage() {
   const plans = Object.values(PLANS);
@@ -27,7 +30,7 @@ export default function PricingPage() {
             <p className="text-[13px] text-muted">{p.tagline}</p>
             <div className="mt-5"><span className="text-4xl font-semibold tracking-tight tabular">{p.monthly ? formatEUR(p.monthly).replace(",00", "") : "0 €"}</span><span className="text-muted"> HT / mois</span></div>
             <p className="text-xs text-muted">{p.yearly ? `ou ${formatEUR(p.yearly).replace(",00", "")} HT par an` : "Pour toujours"}</p>
-            <ul className="mt-6 grid flex-1 gap-2 text-[13.5px]">{p.features.map((f) => <li key={f} className="flex gap-2"><Check className="mt-0.5 size-4 shrink-0 text-positive" />{f}</li>)}</ul>
+            <ul className="mt-6 grid flex-1 gap-2 text-[13.5px]">{planFeatures(p, features.ai).map((f) => <li key={f} className="flex gap-2"><Check className="mt-0.5 size-4 shrink-0 text-positive" />{f}</li>)}</ul>
             <Button asChild variant={p.tier === "essential" ? "primary" : "secondary"} size="lg" className="mt-6"><Link href="/inscription">{p.tier === "free" ? "Commencer gratuitement" : "Essayer, puis choisir cette offre"}</Link></Button>
           </div>
         ))}

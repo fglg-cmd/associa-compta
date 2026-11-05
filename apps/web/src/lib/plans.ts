@@ -52,3 +52,8 @@ export const PLANS: Record<PlanTier, PlanDef> = {
 export function planOf(tier: string | null | undefined): PlanDef {
   return PLANS[(tier as PlanTier) ?? "free"] ?? PLANS.free;
 }
+
+/** Liste des avantages affichée, sans les mentions de l'assistant si l'IA est coupée. */
+export function planFeatures(plan: PlanDef, aiEnabled: boolean): string[] {
+  return aiEnabled ? plan.features : plan.features.filter((f) => !/assistant/i.test(f));
+}

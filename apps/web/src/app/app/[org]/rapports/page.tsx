@@ -100,7 +100,7 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
 
       {tab === "ag" && (
         <Card>
-          <CardHeader><div><CardTitle>Rapport financier de l&apos;assemblée générale</CardTitle><CardDescription>L&apos;assistant rédige un premier jet à partir de vos comptes ; relisez-le, modifiez-le, puis téléchargez le dossier PDF complet.</CardDescription></div></CardHeader>
+          <CardHeader><div><CardTitle>Rapport financier de l&apos;assemblée générale</CardTitle><CardDescription>{features.ai ? <>L&apos;assistant rédige un premier jet à partir de vos comptes ; relisez-le, modifiez-le, puis téléchargez le dossier PDF complet.</> : <>Rédigez le rapport du trésorier, puis téléchargez le dossier PDF complet : compte de résultat, bilan et chiffres clés.</>}</CardDescription></div></CardHeader>
           <CardContent><AgReport orgId={org.id} fiscalYearId={fy.id} aiEnabled={features.ai && canWrite} /></CardContent>
         </Card>
       )}

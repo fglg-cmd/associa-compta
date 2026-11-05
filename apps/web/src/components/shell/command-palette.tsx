@@ -10,7 +10,7 @@ import { NAV, SETTINGS_NAV } from "./nav";
 
 const HIT_ICON = { member: Users, document: FileText, transaction: ArrowLeftRight, entry: ListOrdered, project: FolderKanban };
 
-export function CommandPalette({ slug, canWrite }: { slug: string; canWrite: boolean }) {
+export function CommandPalette({ slug, canWrite, aiEnabled = true }: { slug: string; canWrite: boolean; aiEnabled?: boolean }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -111,7 +111,7 @@ export function CommandPalette({ slug, canWrite }: { slug: string; canWrite: boo
                     </Command.Group>
                   )}
                   <Command.Group heading="Navigation" className="[&_[cmdk-group-heading]]:px-2.5 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-[11px] [&_[cmdk-group-heading]]:text-subtle">
-                    {[...NAV, SETTINGS_NAV].map((n) => (
+                    {[...NAV.filter((n) => aiEnabled || n.href !== "/assistant"), SETTINGS_NAV].map((n) => (
                       <Command.Item key={n.label} value={n.label} onSelect={() => go(base + n.href)} className={item}>
                         <n.icon /> <span className="flex-1">{n.label}</span>
                         {"shortcut" in n && <span className="font-mono text-[11px] text-subtle">{n.shortcut}</span>}

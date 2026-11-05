@@ -3,6 +3,7 @@ import { ArrowRight, Bot, Check, FileSearch, FolderKanban, Landmark, Lock, PieCh
 import { Button } from "@/components/ui/button";
 import { PLANS } from "@/lib/plans";
 import { formatEUR } from "@associa/accounting";
+import { features } from "@/lib/env";
 
 const FEATURES = [
   { icon: Landmark, title: "Banque automatisée", text: "Importez vos relevés CSV, OFX ou QIF de n'importe quelle banque française. Doublons détectés, catégories proposées, règles apprises à chaque validation." },
@@ -13,13 +14,16 @@ const FEATURES = [
   { icon: PieChart, title: "Rapports en un clic", text: "Compte de résultat, bilan, balance, grand livre, FEC. En PDF, Excel ou CSV, prêts pour l'assemblée générale." },
 ];
 
+export const dynamic = "force-dynamic";
+
 export default function Landing() {
+  const ai = features.ai;
   return (
     <main>
       <section className="relative overflow-hidden">
         <div aria-hidden className="pointer-events-none absolute inset-x-0 -top-40 h-[640px] bg-[radial-gradient(ellipse_55%_45%_at_50%_30%,color-mix(in_oklch,var(--accent)_16%,transparent),transparent)]" />
         <div className="relative mx-auto max-w-6xl px-5 pb-20 pt-20 text-center sm:pt-28">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1 text-xs text-muted shadow-xs"><Sparkles className="size-3.5 text-accent" /> Avec un assistant financier propulsé par l&apos;IA</span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1 text-xs text-muted shadow-xs"><Sparkles className="size-3.5 text-accent" /> {ai ? <>Avec un assistant financier propulsé par l&apos;IA</> : <>Conforme au plan comptable associatif</>}</span>
           <h1 className="mx-auto mt-6 max-w-3xl text-[40px] font-semibold leading-[1.08] tracking-[-0.035em] sm:text-[58px]">La comptabilité de votre association, <span className="text-accent">enfin simple.</span></h1>
           <p className="mx-auto mt-5 max-w-xl text-[17px] leading-relaxed text-muted">Importez vos relevés, validez les catégories proposées : ASSOCIA COMPTA tient une comptabilité en partie double conforme, prête pour votre assemblée générale.</p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
@@ -61,13 +65,13 @@ export default function Landing() {
               </div>
             ))}
           </div>
-          <div className="mt-6 rounded-xl border border-border bg-surface p-6 shadow-xs md:flex md:items-center md:gap-8">
+          {ai && <div className="mt-6 rounded-xl border border-border bg-surface p-6 shadow-xs md:flex md:items-center md:gap-8">
             <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-accent text-white"><Bot className="size-5" /></span>
             <div className="mt-4 md:mt-0">
               <h3 className="font-semibold">Un assistant financier qui connaît vos comptes</h3>
               <p className="mt-1 text-[13.5px] text-muted">« Notre trésorerie tiendra-t-elle jusqu&apos;en juin ? », « Explique-moi les fonds dédiés », « Rédige le rapport financier de l&apos;AG » : il répond à partir de vos chiffres réels, sans jamais les inventer.</p>
             </div>
-          </div>
+          </div>}
         </div>
       </section>
 

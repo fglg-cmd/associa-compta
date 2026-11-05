@@ -45,5 +45,6 @@ export const serverEnv = {
 export const features = {
   get billing() { return Boolean(serverEnv.stripeSecretKey); },
   get email() { return Boolean(serverEnv.resendApiKey); },
-  get ai() { return Boolean(serverEnv.anthropicApiKey || serverEnv.openaiApiKey); },
+  /** IA active : une clé est présente et AI_ENABLED n'est pas « off » (coupure sans supprimer la clé). */
+  get ai() { return process.env.AI_ENABLED !== "off" && Boolean(serverEnv.anthropicApiKey || serverEnv.openaiApiKey); },
 };

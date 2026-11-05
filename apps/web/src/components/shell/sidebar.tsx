@@ -53,10 +53,10 @@ export function OrgSwitcher({ org, orgs }: Pick<ShellProps, "org" | "orgs">) {
   );
 }
 
-export function NavLinks({ slug, pendingCount, onNavigate }: { slug: string; pendingCount: number; onNavigate?: () => void }) {
+export function NavLinks({ slug, pendingCount, onNavigate, aiEnabled = true }: { slug: string; pendingCount: number; onNavigate?: () => void; aiEnabled?: boolean }) {
   const pathname = usePathname();
   const base = `/app/${slug}`;
-  const items = [...NAV, SETTINGS_NAV];
+  const items = [...NAV.filter((n) => aiEnabled || n.href !== "/assistant"), SETTINGS_NAV];
   return (
     <nav className="grid gap-0.5">
       {items.map((item) => {
@@ -163,7 +163,7 @@ export function Sidebar(props: ShellProps) {
         <span className="flex-1 text-left">Rechercher…</span>
         <Kbd>⌘K</Kbd>
       </button>
-      <NavLinks slug={props.org.slug} pendingCount={props.pendingCount} />
+      <NavLinks slug={props.org.slug} pendingCount={props.pendingCount} aiEnabled={props.aiEnabled} />
       <div className="mt-auto grid gap-2">
         {props.org.plan === "free" && (
           <Link href={`/app/${props.org.slug}/parametres?onglet=abonnement`} className="rounded-lg border border-border bg-surface p-3 text-[12.5px] shadow-xs hover:border-border-strong">

@@ -1,4 +1,5 @@
 import { getOrgContext, getSessionUser, isPlatformAdmin } from "@/lib/auth";
+import { features } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/shell/sidebar";
 import { CommandPalette } from "@/components/shell/command-palette";
@@ -24,6 +25,7 @@ export default async function OrgLayout({ children, params }: { children: React.
     role: ctx.role,
     pendingCount: pending ?? 0,
     isPlatformAdmin: admin,
+    aiEnabled: features.ai,
   };
 
   return (
@@ -33,7 +35,7 @@ export default async function OrgLayout({ children, params }: { children: React.
         <MobileNav {...shellProps} />
         <main className="mx-auto w-full max-w-[1200px] flex-1 px-4 py-6 sm:px-8 sm:py-8">{children}</main>
       </div>
-      <CommandPalette slug={ctx.org.slug} canWrite={ctx.canWrite} />
+      <CommandPalette slug={ctx.org.slug} canWrite={ctx.canWrite} aiEnabled={features.ai} />
     </div>
   );
 }

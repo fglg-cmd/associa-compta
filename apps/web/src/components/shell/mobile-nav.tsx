@@ -22,7 +22,7 @@ export function MobileNav(props: ShellProps) {
               <OrgSwitcher org={props.org} orgs={props.orgs} />
               <D.Close className="rounded-md p-1.5 hover:bg-surface-2" aria-label="Fermer"><X className="size-4" /></D.Close>
             </div>
-            <NavLinks slug={props.org.slug} pendingCount={props.pendingCount} onNavigate={() => setOpen(false)} />
+            <NavLinks slug={props.org.slug} pendingCount={props.pendingCount} aiEnabled={props.aiEnabled} onNavigate={() => setOpen(false)} />
             <div className="mt-auto"><UserMenu user={props.user} isPlatformAdmin={props.isPlatformAdmin} slug={props.org.slug} /></div>
           </D.Content>
         </D.Portal>
