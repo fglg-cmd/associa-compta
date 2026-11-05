@@ -41,7 +41,7 @@ export async function GET() {
       integrations: {
         stripe: configured(process.env.STRIPE_SECRET_KEY),
         email: configured(process.env.RESEND_API_KEY),
-        ai: process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY ? "configured" : "missing",
+        ai: process.env.AI_ENABLED === "off" ? "off" : process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY ? "configured" : "missing",
         cron: configured(process.env.CRON_SECRET),
       },
       latencyMs: Date.now() - started,

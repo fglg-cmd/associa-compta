@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(publicEnv.appUrl),
   title: { default: "ASSOCIA COMPTA — La comptabilité associative, enfin simple", template: "%s · ASSOCIA COMPTA" },
   description:
-    "Le logiciel de gestion financière des associations : banque, justificatifs, adhérents, projets, bilan et compte de résultat conformes, assistant IA. Gratuit pour démarrer.",
+    "Le logiciel de gestion financière des associations : banque, justificatifs, adhérents, projets, bilan et compte de résultat conformes. Gratuit pour démarrer.",
   applicationName: "ASSOCIA COMPTA",
   openGraph: { type: "website", locale: "fr_FR", siteName: "ASSOCIA COMPTA" },
   icons: { icon: "/icon.svg" },
