@@ -2,7 +2,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { getBrowserClient } from "@/lib/supabase/browser";
-import { publicEnv } from "@/lib/public-env";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 
@@ -15,7 +14,7 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setState("loading");
     const { error } = await getBrowserClient().auth.resetPasswordForEmail(email, {
-      redirectTo: `${publicEnv.appUrl}/auth/callback?next=/auth/nouveau-mot-de-passe`,
+      redirectTo: `${window.location.origin}/auth/callback?next=/auth/nouveau-mot-de-passe`,
     });
     if (error) {
       setError(error.message);

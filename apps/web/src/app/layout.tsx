@@ -2,10 +2,11 @@ import type { Metadata, Viewport } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { Providers } from "@/components/providers/providers";
+import { publicEnv } from "@/lib/public-env";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
+  metadataBase: new URL(publicEnv.appUrl),
   title: { default: "ASSOCIA COMPTA — La comptabilité associative, enfin simple", template: "%s · ASSOCIA COMPTA" },
   description:
     "Le logiciel de gestion financière des associations : banque, justificatifs, adhérents, projets, bilan et compte de résultat conformes, assistant IA. Gratuit pour démarrer.",

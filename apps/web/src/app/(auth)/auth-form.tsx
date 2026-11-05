@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Mail } from "lucide-react";
 import { getBrowserClient } from "@/lib/supabase/browser";
-import { publicEnv } from "@/lib/public-env";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/input";
 
@@ -39,14 +38,15 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(params.get("error"));
 
-  const redirectTo = `${publicEnv.appUrl}/auth/callback?next=${encodeURIComponent(next)}`;
+  // Calculé au clic : l'adresse réelle du site, quel que soit le domaine
+  const redirectTo = () => `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
   const supabase = getBrowserClient();
 
   async function oauth(provider: "google" | "azure") {
     setLoading(provider);
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo, scopes: provider === "azure" ? "email openid profile" : undefined },
+      options: { redirectTo: redirectTo(), scopes: provider === "azure" ? "email openid profile" : undefined },
     });
     if (error) {
       setError(error.message);
@@ -64,7 +64,7 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: redirectTo, data: { full_name: fullName } },
+          options: { emailRedirectTo: redirectTo(), data: { full_name: fullName } },
         });
         if (error) throw error;
         if (data.session) router.push(next !== "/app" ? next : "/onboarding");
@@ -88,7 +88,7 @@ export function AuthForm({ mode }: { mode: "signin" | "signup" }) {
       return;
     }
     setLoading("magic");
-    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo } });
+    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo() } });
     setLoading(null);
     if (error) setError(error.message);
     else {
