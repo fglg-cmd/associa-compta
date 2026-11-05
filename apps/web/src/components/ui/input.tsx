@@ -50,11 +50,25 @@ export function Field({
   children: React.ReactNode;
   className?: string;
 }) {
+  const message = error ? <p className="text-xs text-negative">{error}</p> : hint ? <p className="text-xs text-muted">{hint}</p> : null;
+  // Sans identifiant explicite, l'étiquette englobe le champ : association implicite
+  // (clic sur l'intitulé, lecteurs d'écran, accessibilité RGAA).
+  if (label && !htmlFor) {
+    return (
+      <div className={cn("flex flex-col gap-1.5", className)}>
+        <label className="flex flex-col gap-1.5">
+          <span className="text-[13px] font-medium text-foreground">{label}</span>
+          {children}
+        </label>
+        {message}
+      </div>
+    );
+  }
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
       {label && <Label htmlFor={htmlFor}>{label}</Label>}
       {children}
-      {error ? <p className="text-xs text-negative">{error}</p> : hint ? <p className="text-xs text-muted">{hint}</p> : null}
+      {message}
     </div>
   );
 }

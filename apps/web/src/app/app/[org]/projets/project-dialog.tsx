@@ -57,13 +57,14 @@ export function ProjectDialog({ orgId, project, defaultOpen }: { orgId: string; 
             </Field>
           </div>
           <Field label="Description"><Textarea name="description" defaultValue={project?.description ?? ""} /></Field>
-          <Field label="Couleur">
+          <div className="grid gap-1.5" role="group" aria-label="Couleur">
+            <span className="text-[13px] font-medium">Couleur</span>
             <div className="flex gap-2">
               {COLORS.map((c) => (
                 <button key={c} type="button" onClick={() => setColor(c)} aria-label={c} className={cn("size-6 rounded-full ring-offset-2 ring-offset-surface", color === c && "ring-2 ring-foreground")} style={{ background: c }} />
               ))}
             </div>
-          </Field>
+          </div>
           {error && <p className="text-[13px] text-negative">{error}</p>}
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => setOpen(false)}>Annuler</Button>
