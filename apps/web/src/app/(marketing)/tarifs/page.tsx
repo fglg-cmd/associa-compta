@@ -22,6 +22,11 @@ export default function PricingPage() {
   return (
     <main className="mx-auto max-w-6xl px-5 py-20">
       <h1 className="text-center text-4xl font-semibold tracking-[-0.03em]">Des tarifs simples, pensés pour les associations</h1>
+      {features.beta && (
+        <div className="mx-auto mt-6 max-w-2xl rounded-xl border border-accent/30 bg-accent-soft/50 px-5 py-4 text-center text-[14px]">
+          <strong className="text-accent">Phase de lancement : tout est gratuit.</strong> Toutes les fonctionnalités sont offertes, sans limite, pendant la phase de lancement. Les tarifs ci-dessous s&apos;appliqueront ensuite, avec un préavis d&apos;au moins un mois.
+        </div>
+      )}
       <p className="mx-auto mt-3 max-w-lg text-center text-muted">Toutes les offres incluent la comptabilité en partie double, le bilan et le compte de résultat. Prix HT, -17 % en paiement annuel.</p>
       <div className="mt-12 grid gap-4 md:grid-cols-3">
         {plans.map((p) => (
@@ -31,7 +36,7 @@ export default function PricingPage() {
             <div className="mt-5"><span className="text-4xl font-semibold tracking-tight tabular">{p.monthly ? formatEUR(p.monthly).replace(",00", "") : "0 €"}</span><span className="text-muted"> HT / mois</span></div>
             <p className="text-xs text-muted">{p.yearly ? `ou ${formatEUR(p.yearly).replace(",00", "")} HT par an` : "Pour toujours"}</p>
             <ul className="mt-6 grid flex-1 gap-2 text-[13.5px]">{planFeatures(p, features.ai).map((f) => <li key={f} className="flex gap-2"><Check className="mt-0.5 size-4 shrink-0 text-positive" />{f}</li>)}</ul>
-            <Button asChild variant={p.tier === "essential" ? "primary" : "secondary"} size="lg" className="mt-6"><Link href="/inscription">{p.tier === "free" ? "Commencer gratuitement" : "Essayer, puis choisir cette offre"}</Link></Button>
+            <Button asChild variant={p.tier === "essential" ? "primary" : "secondary"} size="lg" className="mt-6"><Link href="/inscription">{p.tier === "free" || features.beta ? "Commencer gratuitement" : "Essayer, puis choisir cette offre"}</Link></Button>
           </div>
         ))}
       </div>

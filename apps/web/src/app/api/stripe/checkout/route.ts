@@ -9,6 +9,9 @@ export const runtime = "nodejs";
 
 /** Crée une session Stripe Checkout pour souscrire un abonnement. */
 export async function POST(req: NextRequest) {
+  if (process.env.BETA_FREE === "on") {
+    return NextResponse.json({ error: "Toutes les fonctionnalités sont gratuites pendant la phase de lancement." }, { status: 403 });
+  }
   try {
     const body = z.object({ orgId: z.uuid(), plan: z.enum(["essential", "pro"]), interval: z.enum(["month", "year"]) }).parse(await req.json());
     const { org, user } = await requireOrgAdmin(body.orgId);

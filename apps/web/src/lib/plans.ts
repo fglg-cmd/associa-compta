@@ -49,7 +49,14 @@ export const PLANS: Record<PlanTier, PlanDef> = {
   },
 };
 
+/** Phase de lancement gratuite (variable BETA_FREE=on) : tout est inclus, sans paiement. */
+export function isLaunchBeta(): boolean {
+  return process.env.BETA_FREE === "on";
+}
+
+/** Offre effective d'une association (limites appliquées côté serveur). */
 export function planOf(tier: string | null | undefined): PlanDef {
+  if (isLaunchBeta()) return PLANS.pro;
   return PLANS[(tier as PlanTier) ?? "free"] ?? PLANS.free;
 }
 

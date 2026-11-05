@@ -165,7 +165,12 @@ export function Sidebar(props: ShellProps) {
       </button>
       <NavLinks slug={props.org.slug} pendingCount={props.pendingCount} aiEnabled={props.aiEnabled} />
       <div className="mt-auto grid gap-2">
-        {props.org.plan === "free" && (
+        {props.beta ? (
+          <div className="rounded-lg border border-accent/30 bg-accent-soft/50 p-3 text-[12.5px]">
+            <span className="flex items-center gap-1.5 font-semibold text-accent"><LogoMark className="size-4" /> Phase de lancement</span>
+            <span className="mt-1 block text-muted">Toutes les fonctionnalités sont gratuites et illimitées.</span>
+          </div>
+        ) : props.org.plan === "free" && (
           <Link href={`/app/${props.org.slug}/parametres?onglet=abonnement`} className="rounded-lg border border-border bg-surface p-3 text-[12.5px] shadow-xs hover:border-border-strong">
             <span className="flex items-center gap-1.5 font-semibold"><LogoMark className="size-4" /> Offre Découverte</span>
             <span className="mt-1 block text-muted">Passez à Essentiel pour l&apos;OCR illimité, les relances et plus encore.</span>

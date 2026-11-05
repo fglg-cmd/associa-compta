@@ -43,7 +43,9 @@ export const serverEnv = {
 };
 
 export const features = {
-  get billing() { return Boolean(serverEnv.stripeSecretKey); },
+  /** Paiement proposé : Stripe configuré ET hors phase de lancement gratuite. */
+  get billing() { return Boolean(serverEnv.stripeSecretKey) && process.env.BETA_FREE !== "on"; },
+  get beta() { return process.env.BETA_FREE === "on"; },
   get email() { return Boolean(serverEnv.resendApiKey); },
   /** IA active : une clé est présente et AI_ENABLED n'est pas « off » (coupure sans supprimer la clé). */
   get ai() { return process.env.AI_ENABLED !== "off" && Boolean(serverEnv.anthropicApiKey || serverEnv.openaiApiKey); },

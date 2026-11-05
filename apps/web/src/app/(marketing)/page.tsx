@@ -30,7 +30,7 @@ export default function Landing() {
             <Button asChild variant="primary" size="lg" className="h-11 px-5 text-[15px]"><Link href="/inscription">Commencer gratuitement <ArrowRight /></Link></Button>
             <Button asChild size="lg" className="h-11 px-5 text-[15px]"><Link href="/tarifs">Voir les tarifs</Link></Button>
           </div>
-          <p className="mt-4 text-xs text-subtle">Gratuit jusqu&apos;à 50 adhérents · Sans carte bancaire · Prêt en deux minutes</p>
+          <p className="mt-4 text-xs text-subtle">{features.beta ? "Phase de lancement : toutes les fonctionnalités gratuites · Sans carte bancaire · Prêt en deux minutes" : "Gratuit jusqu'à 50 adhérents · Sans carte bancaire · Prêt en deux minutes"}</p>
 
           <div className="mx-auto mt-16 max-w-4xl rounded-2xl border border-border bg-surface p-2 text-left shadow-lg">
             <div className="rounded-xl border border-border bg-background p-5">
@@ -97,8 +97,8 @@ export default function Landing() {
 
       <section className="border-t border-border bg-surface/50">
         <div className="mx-auto max-w-6xl px-5 py-20 text-center">
-          <h2 className="text-3xl font-semibold tracking-[-0.025em]">Un prix d&apos;association.</h2>
-          <p className="mt-3 text-muted">Gratuit pour démarrer, puis {formatEUR(PLANS.essential.monthly).replace(",00", "")} HT par mois pour tout débloquer.</p>
+          <h2 className="text-3xl font-semibold tracking-[-0.025em]">{features.beta ? "Gratuit pendant la phase de lancement." : "Un prix d'association."}</h2>
+          <p className="mt-3 text-muted">{features.beta ? "Profitez de toutes les fonctionnalités, sans limite et sans carte bancaire." : `Gratuit pour démarrer, puis ${formatEUR(PLANS.essential.monthly).replace(",00", "")} HT par mois pour tout débloquer.`}</p>
           <Button asChild variant="primary" size="lg" className="mt-8 h-11 px-5"><Link href="/inscription">Créer mon espace gratuit <ArrowRight /></Link></Button>
         </div>
       </section>

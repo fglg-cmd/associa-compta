@@ -33,4 +33,5 @@ export interface ShellProps {
   pendingCount: number;
   isPlatformAdmin: boolean;
   aiEnabled: boolean;
+  beta: boolean;
 }

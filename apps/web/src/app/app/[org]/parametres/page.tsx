@@ -64,7 +64,9 @@ export default async function SettingsPage({ params, searchParams }: { params: P
   }
   if (tab === "abonnement") {
     const { data: sub } = await supabase.from("subscriptions").select("*").eq("organization_id", org.id).maybeSingle();
-    content = <>{sp.raison === "export" && <div className="mb-4 rounded-lg bg-accent-soft px-4 py-3 text-[13px] text-accent">Les exports Excel et PDF détaillés (balance, grand livre, journal) sont inclus dès l&apos;offre Essentiel.</div>}<BillingPanel orgId={org.id} current={org.plan} plans={Object.values(PLANS).map((p) => ({ ...p, features: planFeatures(p, features.ai) }))} subscription={sub} canManage={canAdmin} billingEnabled={features.billing} success={sp.statut === "succes"} /></>;
+    content = features.beta ? (
+      <Card><CardHeader><div><CardTitle>Phase de lancement : tout est gratuit</CardTitle><CardDescription>Pendant la phase de lancement, votre association bénéficie gratuitement de toutes les fonctionnalités, sans limite. Vous serez prévenu au moins un mois à l&apos;avance avant toute mise en place d&apos;un abonnement, et vous pourrez à tout moment exporter vos données.</CardDescription></div></CardHeader></Card>
+    ) : <>{sp.raison === "export" && <div className="mb-4 rounded-lg bg-accent-soft px-4 py-3 text-[13px] text-accent">Les exports Excel et PDF détaillés (balance, grand livre, journal) sont inclus dès l&apos;offre Essentiel.</div>}<BillingPanel orgId={org.id} current={org.plan} plans={Object.values(PLANS).map((p) => ({ ...p, features: planFeatures(p, features.ai) }))} subscription={sub} canManage={canAdmin} billingEnabled={features.billing} success={sp.statut === "succes"} /></>;
   }
   if (tab === "support") {
     const { data: tickets } = await supabase.from("support_tickets").select("id, subject, status, admin_reply, created_at").eq("user_id", userId).order("created_at", { ascending: false }).limit(20);

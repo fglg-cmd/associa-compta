@@ -26,6 +26,7 @@ export default async function OrgLayout({ children, params }: { children: React.
     pendingCount: pending ?? 0,
     isPlatformAdmin: admin,
     aiEnabled: features.ai,
+    beta: features.beta,
   };
 
   return (
