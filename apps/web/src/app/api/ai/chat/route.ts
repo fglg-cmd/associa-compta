@@ -4,6 +4,7 @@ import { requireOrgMember } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { features } from "@/lib/env";
 import { aiErrorCode, streamChat, type ChatTurn } from "@/lib/ai";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { planOf } from "@/lib/plans";
 import { track } from "@/lib/analytics";
 import { buildFinancialContext } from "@/modules/ai/context";
@@ -92,7 +93,11 @@ export async function POST(req: NextRequest) {
         const code = aiErrorCode(e);
         const msg = full ? "\n\n_(Réponse interrompue, réessayez.)_" : `Le service d'IA est momentanément indisponible (${code}). Réessayez dans un instant.`;
         controller.enqueue(encoder.encode(msg));
-        await supabase.from("ai_messages").insert({ organization_id: org.id, conversation_id: conversationId, role: "assistant", content: full + msg, provider: "error", model: code.slice(0, 60) });
+        await supabase.from("ai_messages").insert({ organization_id: org.id, conversation_id: conversationId, role: "assistant", content: full + msg, provider: "error", model: code.slice(0, 60),
+          // Détail technique pour le diagnostic (message du fournisseur, jamais de secret)
+          input_tokens: null, output_tokens: null }).then(() =>
+          createAdminClient().from("audit_log").insert({ organization_id: org.id, action: "error", entity: "ai_provider", data: { code, detail: String((e as { error?: { error?: { message?: string } }; message?: string })?.error?.error?.message ?? (e as Error)?.message ?? "").slice(0, 500) } }),
+        );
       } finally {
         controller.close();
       }
