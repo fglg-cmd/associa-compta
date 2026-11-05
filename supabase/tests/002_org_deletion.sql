@@ -11,6 +11,10 @@ update c set ba = public.create_bank_account(org, 'CC', '', '', 10000, '2026-01-
 insert into public.bank_transactions (organization_id, bank_account_id, date, label, amount, fingerprint)
   select org, ba, '2026-02-01', 'X', 500, 'z' from c;
 select public.book_bank_transaction((select id from public.bank_transactions limit 1), (select id from public.accounts where number = '756'));
+insert into public.members (organization_id, first_name, last_name) select org, 'Jean', 'Payeur' from c;
+insert into public.member_fees (organization_id, member_id, label, period_start, period_end, amount_due, due_date)
+  select org, (select id from public.members limit 1), '2026', '2026-01-01', '2026-12-31', 2000, '2026-03-01' from c;
+select public.record_fee_payment((select id from public.member_fees limit 1), '2026-03-02', 2000, 'cash');
 -- Une écriture validée reste indestructible en dehors de la suppression de l'association
 do $$ begin
   begin
@@ -23,7 +27,8 @@ set constraints all immediate;
 reset role;
 do $$ begin
   if exists (select 1 from public.journal_entries) or exists (select 1 from public.entry_lines)
-     or exists (select 1 from public.bank_accounts) or exists (select 1 from public.accounts) then
+     or exists (select 1 from public.bank_accounts) or exists (select 1 from public.accounts)
+     or exists (select 1 from public.fee_payments) or exists (select 1 from public.members) then
     raise exception 'ECHEC : données restantes après suppression';
   end if;
 end $$;

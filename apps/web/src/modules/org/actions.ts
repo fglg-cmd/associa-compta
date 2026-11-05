@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { ASSOCIATION_CHART, parseAmount } from "@associa/accounting";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireOrgAdmin, requireUser } from "@/lib/auth";
 import { fail, humanizeError, run, unwrap, type ActionResult } from "@/lib/action";
 import { slugify } from "@/lib/utils";
@@ -178,10 +179,14 @@ export async function deleteOrganization(orgId: string, confirmName: string): Pr
     const { supabase, org, role } = await requireOrgAdmin(orgId);
     if (role !== "owner") throw new Error("Seul le propriétaire peut supprimer l'association.");
     if (confirmName.trim() !== org.name) throw new Error("Le nom saisi ne correspond pas.");
-    // Fichiers du stockage
+    // 1. On note les fichiers, 2. on supprime l'association (si elle échoue, rien n'est perdu),
+    // 3. on efface ensuite les fichiers du stockage avec la clé serveur.
     const { data: docs } = await supabase.from("documents").select("storage_path").eq("organization_id", orgId);
-    if (docs?.length) await supabase.storage.from("documents").remove(docs.map((d) => d.storage_path as string));
-    unwrap(await supabase.from("organizations").delete().eq("id", orgId));
+    const { error, count } = await supabase.from("organizations").delete({ count: "exact" }).eq("id", orgId);
+    if (error) throw error;
+    if (!count) throw new Error("La suppression a été refusée.");
+    const paths = (docs ?? []).map((d) => d.storage_path as string);
+    for (let i = 0; i < paths.length; i += 100) await createAdminClient().storage.from("documents").remove(paths.slice(i, i + 100));
   } catch (e) {
     return fail(humanizeError(e));
   }
