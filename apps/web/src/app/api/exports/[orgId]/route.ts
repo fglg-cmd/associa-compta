@@ -3,6 +3,7 @@ import { z } from "zod";
 import { unstable_rethrow } from "next/navigation";
 import { requireOrgMember } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { resolveFiscalYear, getStatements } from "@/modules/accounting/queries";
 import { buildFec, buildTables } from "@/modules/reports/tabular";
 import { toCsv, toXlsx } from "@/modules/reports/render";
@@ -80,6 +81,9 @@ function handle(e: unknown) {
   if (/droits|Accès/.test(msg)) return NextResponse.json({ error: msg }, { status: 403 });
   if (e instanceof z.ZodError) return NextResponse.json({ error: "Paramètres invalides" }, { status: 400 });
   console.error("[export]", e);
+  // Trace technique pour le diagnostic (aucune donnée de l'association)
+  const err = e as Error;
+  void createAdminClient().from("audit_log").insert({ action: "error", entity: "export", data: { message: String(err?.message ?? e).slice(0, 500), stack: String(err?.stack ?? "").split("\n").slice(0, 6).join(" | ").slice(0, 900) } }).then(() => undefined, () => undefined);
   return NextResponse.json({ error: "Échec de la génération" }, { status: 500 });
 }
 
