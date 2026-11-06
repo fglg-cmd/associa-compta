@@ -18,6 +18,7 @@ export function AccountSelect({
   placeholder = "Choisir une catégorie…",
   exclude,
   onlyClasses,
+  labelFirst,
 }: {
   accounts: Pick<Account, "id" | "number" | "label" | "is_active">[];
   direction?: "in" | "out";
@@ -29,6 +30,8 @@ export function AccountSelect({
   placeholder?: string;
   exclude?: string[];
   onlyClasses?: number[];
+  /** Intitulé avant le numéro de compte (vocabulaire du trésorier plutôt que du comptable). */
+  labelFirst?: boolean;
 }) {
   const active = accounts.filter((a) => a.is_active && !exclude?.includes(a.id) && (!onlyClasses || onlyClasses.includes(Number(a.number[0]))));
   const byNumber = new Map(active.map((a) => [a.number, a]));
@@ -66,7 +69,7 @@ export function AccountSelect({
         return (
           <optgroup key={g.label} label={g.label}>
             {list.map((a) => (
-              <option key={a.id} value={a.id}>{a.number} · {a.label}</option>
+              <option key={a.id} value={a.id}>{labelFirst ? `${a.label} (${a.number})` : `${a.number} · ${a.label}`}</option>
             ))}
           </optgroup>
         );

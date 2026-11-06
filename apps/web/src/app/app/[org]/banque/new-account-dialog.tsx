@@ -8,14 +8,20 @@ import { Dialog, DialogContent, DialogFooter, DialogTrigger } from "@/components
 import { Field, Input } from "@/components/ui/input";
 import { todayISO } from "@/lib/utils";
 
-export function NewBankAccountDialog({ orgId, variant = "primary" }: { orgId: string; variant?: "primary" | "secondary" }) {
+export function NewBankAccountDialog({ orgId, variant = "primary" }: { orgId: string; variant?: "primary" | "secondary" | "tile" }) {
   const [open, setOpen] = useState(false);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant={variant}><Plus /> Compte bancaire</Button>
+        {variant === "tile" ? (
+          <button type="button" className="flex min-h-[86px] items-center justify-center gap-1.5 rounded-xl border border-dashed border-border-strong text-[13px] font-medium text-muted transition-colors hover:border-accent/50 hover:bg-accent-soft/30 hover:text-foreground">
+            <Plus className="size-4" /> Ajouter un compte bancaire
+          </button>
+        ) : (
+          <Button variant={variant}><Plus /> Compte bancaire</Button>
+        )}
       </DialogTrigger>
       <DialogContent title="Nouveau compte bancaire" description="Un compte 512 et un journal de banque dédiés sont créés automatiquement.">
         <form

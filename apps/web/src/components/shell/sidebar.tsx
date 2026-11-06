@@ -1,8 +1,8 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { Check, ChevronsUpDown, LogOut, Moon, Plus, Search, Shield, Sun, LifeBuoy } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Check, ChevronRight, ChevronsUpDown, LogOut, Moon, Plus, Search, Shield, Sun, LifeBuoy } from "lucide-react";
 import { cn, initials } from "@/lib/utils";
 import { signOut } from "@/modules/org/actions";
 import { LogoMark } from "@/components/logo";
@@ -60,28 +60,28 @@ export function NavLinks({ slug, pendingCount, onNavigate, aiEnabled = true }: {
   const pathname = usePathname();
   const base = `/app/${slug}`;
   const items = NAV.filter((n) => aiEnabled || n.href !== "/assistant");
-  const groups: { name: string; items: (typeof items)[number][] }[] = [];
-  for (const it of items) {
-    const g = groups.at(-1);
-    if (g && g.name === it.group) g.items.push(it);
-    else groups.push({ name: it.group, items: [it] });
-  }
+  const isActive = (href: string) => (href === "" ? pathname === base : pathname.startsWith(base + href));
+  const main = items.filter((n) => !n.group);
+  const advanced = items.filter((n) => n.group === "avance");
+  const advancedActive = advanced.some((n) => isActive(n.href));
+  const [showAdvanced, setShowAdvanced] = useState(advancedActive);
+  useEffect(() => { if (advancedActive) setShowAdvanced(true); }, [advancedActive]);
+
   const link = (item: { href: string; label: string; icon: typeof SETTINGS_NAV.icon }) => {
-    const href = base + item.href;
-    const active = item.href === "" ? pathname === base : pathname.startsWith(href);
+    const active = isActive(item.href);
     const Icon = item.icon;
     return (
       <Link
         key={item.label}
-        href={href}
+        href={base + item.href}
         onClick={onNavigate}
         aria-current={active ? "page" : undefined}
         className={cn(
-          "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[13.5px] font-medium transition-colors",
+          "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[14px] font-medium transition-colors",
           active ? "bg-surface text-foreground shadow-[0_1px_2px_hsl(var(--shadow-color)/0.06),0_0_0_1px_var(--border)]" : "text-muted hover:bg-surface/70 hover:text-foreground",
         )}
       >
-        <Icon className={cn("size-4 transition-colors", active ? "text-accent" : "text-subtle group-hover:text-muted")} />
+        <Icon className={cn("size-[17px] transition-colors", active ? "text-accent" : "text-subtle group-hover:text-muted")} />
         <span className="flex-1">{item.label}</span>
         {item.href === "/banque" && pendingCount > 0 && (
           <span className="rounded-full bg-accent px-1.5 text-[10.5px] font-semibold leading-[18px] text-white tabular">{pendingCount > 99 ? "99+" : pendingCount}</span>
@@ -91,12 +91,21 @@ export function NavLinks({ slug, pendingCount, onNavigate, aiEnabled = true }: {
   };
   return (
     <nav className="grid gap-4">
-      {groups.map((g) => (
-        <div key={g.name || g.items[0]!.label} className="grid gap-0.5">
-          {g.name && <p className="px-2.5 pb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-subtle">{g.name}</p>}
-          {g.items.map(link)}
+      <div className="grid gap-0.5">{main.map(link)}</div>
+      {advanced.length > 0 && (
+        <div className="grid gap-0.5">
+          <button
+            type="button"
+            onClick={() => setShowAdvanced((v) => !v)}
+            aria-expanded={showAdvanced}
+            className="flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[12px] font-medium text-subtle transition-colors hover:text-muted"
+          >
+            <ChevronRight className={cn("size-3.5 transition-transform", showAdvanced && "rotate-90")} />
+            Outils avancés
+          </button>
+          {showAdvanced && advanced.map(link)}
         </div>
-      ))}
+      )}
       <div className="grid gap-0.5 border-t border-border pt-3">{link(SETTINGS_NAV)}</div>
     </nav>
   );

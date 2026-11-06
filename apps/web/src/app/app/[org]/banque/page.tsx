@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Landmark, Settings2 } from "lucide-react";
+import { CheckCircle2, Landmark, MoreHorizontal, Settings2 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown";
 import { getOrgContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getAccounts, getBankAccounts } from "@/modules/accounting/queries";
@@ -16,8 +17,8 @@ export const metadata = { title: "Banque" };
 
 const PAGE = 100;
 const TABS = [
-  { key: "pending", label: "À traiter" },
-  { key: "done", label: "Comptabilisés" },
+  { key: "pending", label: "À valider" },
+  { key: "done", label: "Validés" },
   { key: "ignored", label: "Ignorés" },
   { key: "all", label: "Tous" },
 ] as const;
@@ -62,7 +63,7 @@ export default async function BankPage({
   if (view === "done") query = query.in("status", ["booked", "matched"]);
   if (view === "ignored") query = query.eq("status", "ignored");
   if (sp.q) query = query.ilike("label", `%${sp.q.replace(/[%_]/g, "")}%`);
-  const { data: txs, count } = await query.order("date", { ascending: view === "pending" }).order("created_at").range((page - 1) * PAGE, page * PAGE - 1);
+  const { data: txs, count } = await query.order("date", { ascending: false }).order("created_at").range((page - 1) * PAGE, page * PAGE - 1);
 
   // Comptes de contrepartie et justificatifs pour les mouvements comptabilisés
   const entryIds = (txs ?? []).map((t) => t.entry_id).filter(Boolean) as string[];
@@ -111,48 +112,67 @@ export default async function BankPage({
     <>
       <PageHeader
         title="Banque"
-        description="Importez vos relevés, validez les catégories proposées : la comptabilité se fait toute seule."
+        description="Importez votre relevé, vérifiez les catégories proposées, validez."
         actions={
           <>
-            <Button asChild variant="ghost"><Link href={`${base}/regles`}><Settings2 /> Règles</Link></Button>
-            {canWrite && <NewBankAccountDialog orgId={org.id} variant="secondary" />}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="secondary" size="icon" aria-label="Plus d'options"><MoreHorizontal /></Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-64">
+                <DropdownMenuItem asChild><Link href={`${base}/regles`}><Settings2 /> Règles de catégorisation</Link></DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             {canWrite && <ImportDialog orgId={org.id} bankAccounts={active.map((b) => ({ id: b.id, name: b.name }))} defaultAccountId={selected?.id} defaultOpen={sp.action === "importer"} />}
           </>
         }
       />
 
-      <div className="mb-5 flex flex-wrap gap-1.5">
-        <Link href={href({ compte: undefined, page: undefined })} className={cn("rounded-full border px-3 py-1 text-[13px]", !selected ? "border-foreground bg-foreground text-background" : "border-border text-muted hover:text-foreground")}>Tous les comptes</Link>
-        {active.map((b) => (
-          <Link key={b.id} href={href({ compte: b.id, page: undefined })} className={cn("rounded-full border px-3 py-1 text-[13px]", selected?.id === b.id ? "border-foreground bg-foreground text-background" : "border-border text-muted hover:text-foreground")}>
-            {b.name}{b.iban_last4 ? ` ··${b.iban_last4}` : ""}
-          </Link>
-        ))}
-      </div>
+      {active.length > 1 && (
+        <div className="mb-4 flex flex-wrap items-center gap-1.5">
+          <Link href={href({ compte: undefined, page: undefined })} className={cn("rounded-full border px-3 py-1 text-[13px]", !selected ? "border-foreground bg-foreground text-background" : "border-border text-muted hover:text-foreground")}>Tous les comptes</Link>
+          {active.map((b) => (
+            <Link key={b.id} href={href({ compte: b.id, page: undefined })} className={cn("rounded-full border px-3 py-1 text-[13px]", selected?.id === b.id ? "border-foreground bg-foreground text-background" : "border-border text-muted hover:text-foreground")}>
+              {b.name}{b.iban_last4 ? ` ··${b.iban_last4}` : ""}
+            </Link>
+          ))}
+        </div>
+      )}
 
-      <div className="mb-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <div className="mb-6 grid items-start gap-3 md:grid-cols-2 xl:grid-cols-3">
         {recon.map((r) => {
           const gap = r.statement - r.ledger - (r.pendingAmount - r.unmatchedAmount);
+          const toDo = r.pendingCount + r.unmatchedCount;
           return (
             <Card key={r.account.id} className="p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-[13px] font-medium">{r.account.name}</span>
-                {r.pendingCount === 0 && r.unmatchedCount === 0 && gap === 0 ? (
-                  <span className="text-xs text-positive">Rapproché</span>
+              <div className="flex items-center gap-3">
+                <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-surface-2 text-muted"><Landmark className="size-4" /></span>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-[13px] text-muted">{r.account.name}</div>
+                  <div className="text-[20px] leading-tight font-semibold tracking-[-0.02em]"><Amount cents={r.statement} /></div>
+                </div>
+                {toDo === 0 && gap === 0 ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-positive-soft px-2 py-0.5 text-xs font-medium text-positive"><CheckCircle2 className="size-3" /> À jour</span>
                 ) : (
-                  <span className="text-xs text-warning">{r.pendingCount + r.unmatchedCount} élément(s) à rapprocher</span>
+                  <span className="rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent tabular">{toDo} à valider</span>
                 )}
               </div>
-              <dl className="mt-3 grid grid-cols-2 gap-y-1.5 text-[13px]">
-                <dt className="text-muted">Solde relevé</dt><dd className="text-right font-semibold"><Amount cents={r.statement} /></dd>
-                <dt className="text-muted">Solde comptable</dt><dd className="text-right"><Amount cents={r.ledger} /></dd>
-                {r.pendingCount > 0 && (<><dt className="text-muted">Mouvements à traiter</dt><dd className="text-right"><Amount cents={r.pendingAmount} signed /></dd></>)}
-                {r.unmatchedCount > 0 && (<><dt className="text-muted">Écritures non pointées</dt><dd className="text-right"><Amount cents={r.unmatchedAmount} signed /></dd></>)}
-                {gap !== 0 && (<><dt className="text-negative">Écart inexpliqué</dt><dd className="text-right text-negative"><Amount cents={gap} signed /></dd></>)}
-              </dl>
+              {gap !== 0 && (
+                <p className="mt-3 rounded-md bg-negative-soft px-2.5 py-1.5 text-xs text-negative">Écart inexpliqué de <Amount cents={gap} signed /> entre la banque et la comptabilité.</p>
+              )}
+              <details className="group mt-3 text-[12.5px] [&_summary::-webkit-details-marker]:hidden">
+                <summary className="cursor-pointer list-none text-muted hover:text-foreground">Détail du rapprochement <span className="inline-block transition-transform group-open:rotate-90">›</span></summary>
+                <dl className="mt-2 grid grid-cols-2 gap-y-1">
+                  <dt className="text-muted">Solde selon la banque</dt><dd className="text-right"><Amount cents={r.statement} /></dd>
+                  <dt className="text-muted">Solde en comptabilité</dt><dd className="text-right"><Amount cents={r.ledger} /></dd>
+                  {r.pendingCount > 0 && (<><dt className="text-muted">Mouvements à valider</dt><dd className="text-right"><Amount cents={r.pendingAmount} signed /></dd></>)}
+                  {r.unmatchedCount > 0 && (<><dt className="text-muted">Écritures non pointées</dt><dd className="text-right"><Amount cents={r.unmatchedAmount} signed /></dd></>)}
+                </dl>
+              </details>
             </Card>
           );
         })}
+        {canWrite && !selected && <NewBankAccountDialog orgId={org.id} variant="tile" />}
       </div>
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -166,7 +186,7 @@ export default async function BankPage({
         <form className="flex gap-2" action={base}>
           {selected && <input type="hidden" name="compte" value={selected.id} />}
           <input type="hidden" name="vue" value={view} />
-          <input name="q" defaultValue={sp.q} placeholder="Rechercher un libellé…" className="h-8 w-56 rounded-md border border-border bg-surface px-2.5 text-sm shadow-xs focus:border-accent focus:outline-none" />
+          <input name="q" defaultValue={sp.q} placeholder="Rechercher…" className="h-8 w-48 rounded-md border border-border bg-surface px-2.5 text-sm shadow-xs focus:border-accent focus:outline-none" />
         </form>
       </div>
 

@@ -34,7 +34,6 @@ const TRUST = [
   { icon: Lock, label: "Données hébergées dans l'UE" },
 ];
 
-const AUDIENCES = ["Clubs sportifs", "Associations culturelles", "Parents d'élèves", "Comités des fêtes", "Associations caritatives", "Amicales et anciens", "Structures employeuses"];
 
 const STEPS = [
   {
@@ -134,14 +133,6 @@ export default function Landing() {
           {TRUST.map(({ icon: Icon, label }) => (
             <li key={label} className="flex items-center gap-2.5"><Icon className="size-4 shrink-0 text-foreground/70" />{label}</li>
           ))}
-        </ul>
-      </section>
-
-      {/* ——— Pour qui ——— */}
-      <section className="mx-auto max-w-6xl px-5 pt-20 text-center">
-        <p className="text-[14px] text-muted">Pensé pour les bénévoles de toutes les associations loi 1901</p>
-        <ul className="mx-auto mt-4 flex max-w-3xl flex-wrap justify-center gap-2">
-          {AUDIENCES.map((a) => <li key={a} className="rounded-full border border-border bg-surface px-3 py-1 text-[13px] font-medium shadow-xs">{a}</li>)}
         </ul>
       </section>
 

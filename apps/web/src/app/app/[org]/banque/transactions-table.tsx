@@ -2,7 +2,8 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, EyeOff, Link2, Paperclip, RotateCcw, Sparkles, Undo2, Inbox } from "lucide-react";
+import { Check, EyeOff, Link2, MoreHorizontal, Paperclip, RotateCcw, Sparkles, Undo2, Inbox } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown";
 import { toast } from "sonner";
 import { formatEUR } from "@associa/accounting";
 import {
@@ -124,14 +125,14 @@ export function TransactionsTable({
   return (
     <>
       {canWrite && view === "pending" && (
-        <div className="mb-3 flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2 shadow-xs">
+        <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-border bg-surface px-4 py-2.5 shadow-xs">
           <label className="flex items-center gap-2 text-[13px]">
             <input type="checkbox" checked={selected.size > 0 && selected.size === allPendingIds.length} onChange={toggleAll} className="accent-[var(--accent)]" />
             {selected.size ? `${selected.size} sélectionné(s)` : "Tout sélectionner"}
           </label>
-          <label className="flex items-center gap-2 text-[13px] text-muted">
+          <label className="flex items-center gap-2 text-[12.5px] text-muted" title="Les prochains mouvements identiques recevront automatiquement la même catégorie.">
             <input type="checkbox" checked={learn} onChange={(e) => setLearn(e.target.checked)} className="accent-[var(--accent)]" />
-            Mémoriser mes choix pour les prochains imports
+            Retenir mes choix
           </label>
           <div className="ml-auto flex gap-2">
             {selected.size > 0 && (
@@ -141,7 +142,7 @@ export function TransactionsTable({
             )}
             {selected.size === 0 && ready.length > 0 && (
               <Button size="sm" variant="primary" loading={pending} onClick={() => book(ready.map((t) => t.id))}>
-                <Sparkles /> Valider les {ready.length} suggestion(s)
+                <Sparkles /> Valider les {ready.length} suggestion{ready.length > 1 ? "s" : ""}
               </Button>
             )}
           </div>
@@ -154,7 +155,7 @@ export function TransactionsTable({
             const c = choice[t.id] ?? { accountId: "", projectId: "" };
             const suggested = t.status === "pending" && t.suggested_account_id && c.accountId === t.suggested_account_id;
             return (
-              <div key={t.id} className={cn("flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-2.5 lg:flex-nowrap", pending && "opacity-90")}>
+              <div key={t.id} className={cn("flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 transition-colors hover:bg-surface-2/40 lg:flex-nowrap", pending && "opacity-90")}>
                 {canWrite && t.status === "pending" && (
                   <input
                     type="checkbox"
@@ -181,26 +182,34 @@ export function TransactionsTable({
 
                 {t.status === "pending" && canWrite && (
                   <div className="flex w-full flex-wrap items-center gap-2 lg:w-auto lg:flex-nowrap">
-                    <div className="relative w-full sm:w-64">
+                    <div className="relative w-full sm:w-72">
                       <AccountSelect
+                        labelFirst
                         accounts={accounts}
                         direction={t.amount > 0 ? "in" : "out"}
                         exclude={excludeAccountIds}
                         value={c.accountId}
                         onChange={(v) => setChoice({ ...choice, [t.id]: { ...c, accountId: v } })}
-                        className={cn("h-7 text-[13px]", suggested && "border-accent/40 bg-accent-soft/40")}
+                        className={cn("h-8 text-[13px]", suggested && "border-accent/40 bg-accent-soft/40")}
                       />
                     </div>
                     {projects.length > 0 && (
-                      <Select value={c.projectId} onChange={(e) => setChoice({ ...choice, [t.id]: { ...c, projectId: e.target.value } })} className="h-7 w-full text-[13px] sm:w-40">
+                      <Select value={c.projectId} onChange={(e) => setChoice({ ...choice, [t.id]: { ...c, projectId: e.target.value } })} className="h-8 w-full text-[13px] sm:w-40">
                         <option value="">Sans projet</option>
                         {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                       </Select>
                     )}
                     <div className="flex gap-1">
-                      <Tooltip content="Comptabiliser"><Button size="icon-sm" variant="primary" disabled={!c.accountId || pending} onClick={() => book([t.id])} aria-label="Comptabiliser"><Check /></Button></Tooltip>
-                      <Tooltip content="Rapprocher d'une écriture déjà saisie"><Button size="icon-sm" disabled={pending} onClick={() => openMatch(t)} aria-label="Rapprocher"><Link2 /></Button></Tooltip>
-                      <Tooltip content="Ignorer (doublon, mouvement interne)"><Button size="icon-sm" variant="ghost" disabled={pending} onClick={() => act(() => setTransactionIgnored(orgId, t.id, true), "Mouvement ignoré")} aria-label="Ignorer"><EyeOff /></Button></Tooltip>
+                      <Tooltip content="Valider cette catégorie"><Button size="icon" variant="primary" disabled={!c.accountId || pending} onClick={() => book([t.id])} aria-label="Comptabiliser"><Check /></Button></Tooltip>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button size="icon" variant="ghost" disabled={pending} aria-label="Autres actions"><MoreHorizontal /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="w-72">
+                          <DropdownMenuItem onSelect={() => openMatch(t)}><Link2 /> Associer à une opération déjà saisie</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => act(() => setTransactionIgnored(orgId, t.id, true), "Mouvement ignoré")}><EyeOff /> Ignorer (doublon, virement interne)</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 )}
