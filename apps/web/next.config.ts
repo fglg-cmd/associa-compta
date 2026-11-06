@@ -33,11 +33,13 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname, "../../"),
   poweredByHeader: false,
   transpilePackages: ["@associa/accounting", "@associa/bank-import"],
-  serverExternalPackages: ["tesseract.js", "exceljs", "@react-pdf/renderer", "mammoth"],
+  serverExternalPackages: ["tesseract.js", "exceljs", "@react-pdf/renderer", "mammoth", "sharp"],
   // Fichiers chargés dynamiquement (non détectés par le traçage) : polices PDF standard
   // de pdfkit. Sans cela, l'export PDF échoue sur Vercel (« Cannot find module Helvetica »).
   outputFileTracingIncludes: {
     "/api/exports/[orgId]": ["../../node_modules/.pnpm/pdfkit@*/node_modules/pdfkit/js/standard-fonts/**/*", "../../node_modules/.pnpm/pdfkit@*/node_modules/pdfkit/js/data/**/*"],
+    // Dictionnaire français de l'OCR, embarqué pour ne pas le télécharger à chaque lecture.
+    "/api/documents/[id]/ocr": ["./ocr-data/**/*"],
   },
   experimental: {
     serverActions: { bodySizeLimit: "26mb" },

@@ -1,4 +1,6 @@
 import "server-only";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { serverEnv } from "./env";
 import { extractFields } from "./ocr-extract";
 
@@ -39,14 +41,55 @@ async function visionAnnotate(bytes: Buffer, mime: string): Promise<string> {
   return json.responses?.[0]?.fullTextAnnotation?.text ?? "";
 }
 
-async function tesseract(bytes: Buffer): Promise<string> {
-  const { createWorker } = await import("tesseract.js");
-  const worker = await createWorker("fra");
+/*
+ * Tesseract (OCR local, sans clé) :
+ * - dictionnaire français embarqué dans le déploiement (ocr-data/, 700 Ko, modèle
+ *   « best_int » du paquet @tesseract.js-data/fra, licence Apache-2.0) : plus de
+ *   téléchargement à chaque lecture ;
+ * - moteur gardé en mémoire entre deux lectures sur la même instance ;
+ * - image réduite à 2 000 px avant lecture si elle est plus grande (photo de téléphone
+ *   12 Mpx) : la lecture est environ 5 fois plus rapide, sans perte de précision utile.
+ */
+const OCR_DATA_DIR = path.join(process.cwd(), "ocr-data");
+const MAX_SIDE = 2000;
+
+type TesseractWorker = Awaited<ReturnType<typeof import("tesseract.js")["createWorker"]>>;
+let workerPromise: Promise<TesseractWorker> | null = null;
+
+function getWorker() {
+  workerPromise ??= (async () => {
+    const { createWorker } = await import("tesseract.js");
+    const local = existsSync(path.join(OCR_DATA_DIR, "fra.traineddata.gz"));
+    return createWorker("fra", 1, local ? { langPath: OCR_DATA_DIR, cacheMethod: "none" } : { cachePath: "/tmp" });
+  })().catch((e) => {
+    workerPromise = null;
+    throw e;
+  });
+  return workerPromise;
+}
+
+/** Réduit une image trop grande (et la passe en niveaux de gris) avant la lecture. */
+async function prepareImage(bytes: Buffer): Promise<Buffer> {
   try {
-    const { data } = await worker.recognize(bytes);
+    const sharp = (await import("sharp")).default;
+    const img = sharp(bytes, { failOn: "none" }).rotate();
+    const meta = await img.metadata();
+    if (Math.max(meta.width ?? 0, meta.height ?? 0) <= MAX_SIDE) return bytes;
+    return await img.resize({ width: MAX_SIDE, height: MAX_SIDE, fit: "inside", withoutEnlargement: true }).grayscale().jpeg({ quality: 85 }).toBuffer();
+  } catch {
+    return bytes; // sharp indisponible : lecture de l'image d'origine
+  }
+}
+
+async function tesseract(bytes: Buffer): Promise<string> {
+  const input = await prepareImage(bytes);
+  try {
+    const worker = await getWorker();
+    const { data } = await worker.recognize(input);
     return data.text;
-  } finally {
-    await worker.terminate();
+  } catch (e) {
+    workerPromise = null; // moteur en erreur : recréé à la prochaine lecture
+    throw e;
   }
 }
 

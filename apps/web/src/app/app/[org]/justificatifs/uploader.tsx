@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Field, Select } from "@/components/ui/input";
 import { cn, formatBytes } from "@/lib/utils";
+import { compressImage } from "@/lib/image-compress";
 
 type Item = { file: File; state: "queued" | "uploading" | "reading" | "done" | "error"; message?: string };
 
@@ -26,30 +27,38 @@ export function Uploader({ orgId, folders, defaultFolder, txId, defaultOpen }: {
   const add = (files: FileList | File[]) => setItems((cur) => [...cur, ...[...files].map((file) => ({ file, state: "queued" as const }))]);
   const update = (i: number, patch: Partial<Item>) => setItems((cur) => cur.map((it, j) => (j === i ? { ...it, ...patch } : it)));
 
+  /** Envoie un document puis lance sa lecture automatique. */
+  async function processOne(i: number, supabase: ReturnType<typeof getBrowserClient>) {
+    const original = items[i]!;
+    update(i, { state: "uploading" });
+    const file = await compressImage(original.file);
+    const mime = file.type || "application/octet-stream";
+    const prep = await prepareUpload(orgId, { name: file.name, size: file.size, mime });
+    if (!prep.ok) { update(i, { state: "error", message: prep.error }); return; }
+    const up = await supabase.storage.from("documents").upload(prep.data.path, file, { contentType: mime, upsert: false });
+    if (up.error) { update(i, { state: "error", message: up.error.message }); return; }
+    const reg = await registerDocument(orgId, { id: prep.data.id, name: file.name, path: prep.data.path, mime, size: file.size, folder, txId: i === 0 && txId ? txId : null });
+    if (!reg.ok) { update(i, { state: "error", message: reg.error }); return; }
+    update(i, { state: "reading" });
+    try {
+      const res = await fetch(`/api/documents/${prep.data.id}/ocr`, { method: "POST" });
+      const json = (await res.json()) as { status: string; fields?: { amount: number | null; vendor: string | null }; matchedTx?: string | null; message?: string };
+      const bits = [json.fields?.vendor, json.fields?.amount ? formatEUR(json.fields.amount) : null, json.matchedTx ? "rattaché au mouvement bancaire" : null].filter(Boolean);
+      update(i, { state: "done", message: json.status === "done" ? bits.join(" · ") || "Texte indexé" : json.message });
+    } catch {
+      update(i, { state: "done", message: "Enregistré (lecture automatique indisponible)" });
+    }
+  }
+
   async function uploadAll() {
     setBusy(true);
     const supabase = getBrowserClient();
-    for (let i = 0; i < items.length; i++) {
-      const it = items[i]!;
-      if (it.state !== "queued") continue;
-      const mime = it.file.type || "application/octet-stream";
-      update(i, { state: "uploading" });
-      const prep = await prepareUpload(orgId, { name: it.file.name, size: it.file.size, mime });
-      if (!prep.ok) { update(i, { state: "error", message: prep.error }); continue; }
-      const up = await supabase.storage.from("documents").upload(prep.data.path, it.file, { contentType: mime, upsert: false });
-      if (up.error) { update(i, { state: "error", message: up.error.message }); continue; }
-      const reg = await registerDocument(orgId, { id: prep.data.id, name: it.file.name, path: prep.data.path, mime, size: it.file.size, folder, txId: i === 0 && txId ? txId : null });
-      if (!reg.ok) { update(i, { state: "error", message: reg.error }); continue; }
-      update(i, { state: "reading" });
-      try {
-        const res = await fetch(`/api/documents/${prep.data.id}/ocr`, { method: "POST" });
-        const json = (await res.json()) as { status: string; fields?: { amount: number | null; vendor: string | null }; matchedTx?: string | null; message?: string };
-        const bits = [json.fields?.vendor, json.fields?.amount ? formatEUR(json.fields.amount) : null, json.matchedTx ? "rattaché au mouvement bancaire" : null].filter(Boolean);
-        update(i, { state: "done", message: json.status === "done" ? bits.join(" · ") || "Texte indexé" : json.message });
-      } catch {
-        update(i, { state: "done", message: "Enregistré (lecture automatique indisponible)" });
-      }
-    }
+    // Trois documents traités en même temps (au lieu d'un par un).
+    const queue = items.map((it, i) => (it.state === "queued" ? i : -1)).filter((i) => i >= 0);
+    const runners = Array.from({ length: Math.min(3, queue.length) }, async () => {
+      for (let next = queue.shift(); next !== undefined; next = queue.shift()) await processOne(next, supabase);
+    });
+    await Promise.all(runners);
     setBusy(false);
     router.refresh();
     toast.success("Documents enregistrés");
@@ -86,7 +95,7 @@ export function Uploader({ orgId, folders, defaultFolder, txId, defaultOpen }: {
                   <span className="min-w-0 flex-1">
                     <span className="block truncate">{it.file.name}</span>
                     <span className={cn("block truncate text-xs", it.state === "error" ? "text-negative" : "text-muted")}>
-                      {it.message ?? (it.state === "uploading" ? "Envoi…" : it.state === "reading" ? "Lecture automatique…" : formatBytes(it.file.size))}
+                      {it.message ?? (it.state === "uploading" ? "Envoi…" : it.state === "reading" ? "Lecture du montant, de la date et du fournisseur…" : formatBytes(it.file.size))}
                     </span>
                   </span>
                 </li>

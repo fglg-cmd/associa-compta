@@ -1,9 +1,8 @@
 import { cn } from "@/lib/utils";
 
 /*
- * Logo ASSOCIA COMPTA : carré vert en dégradé, « A » blanc ; mot-symbole
- * « Associa » (encre) + « Compta » (vert de marque). Le vert est réservé au logo :
- * l'interface garde sa couleur d'accent.
+ * Logo ASSOCIA COMPTA : carré violet en dégradé, « A » blanc ; mot-symbole
+ * « Associa » (encre) + « Compta » (couleur de marque).
  */
 export function LogoMark({ className }: { className?: string }) {
   return (

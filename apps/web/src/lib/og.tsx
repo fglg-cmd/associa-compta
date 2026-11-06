@@ -14,8 +14,8 @@ export async function ogFonts() {
   ];
 }
 
-/** Vert du logo et son dégradé. */
-export const BRAND = { color: "#3d9670", gradient: "linear-gradient(150deg, #5bbb8e, #3a8a66)" };
+/** Couleur du logo et son dégradé. */
+export const BRAND = { color: "#4f46e5", gradient: "linear-gradient(150deg, #7069f7, #4338ca)" };
 
 /** Monogramme « A » de la marque, en SVG (fond géré par l'appelant). */
 export function OgMark({ size }: { size: number }) {

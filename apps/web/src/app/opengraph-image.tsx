@@ -34,7 +34,7 @@ export default async function OpenGraphImage() {
         {/* Colonne texte */}
         <div style={{ display: "flex", flexDirection: "column", width: 640 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 56, height: 56, borderRadius: 16, backgroundImage: BRAND.gradient, boxShadow: "0 8px 20px -8px rgba(61,150,112,0.6)" }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 56, height: 56, borderRadius: 16, backgroundImage: BRAND.gradient, boxShadow: "0 8px 20px -8px rgba(79,70,229,0.6)" }}>
               <OgMark size={40} />
             </div>
             <div style={{ display: "flex", fontSize: 32, fontWeight: 600, letterSpacing: -1 }}>
