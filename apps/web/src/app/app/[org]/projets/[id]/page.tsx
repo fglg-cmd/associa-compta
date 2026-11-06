@@ -4,9 +4,8 @@ import { ArrowLeft } from "lucide-react";
 import { getOrgContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { getAccounts } from "@/modules/accounting/queries";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Amount } from "@/components/ui/misc";
-import { PairedBars } from "@/components/charts/charts";
 import type { Project, ProjectBudgetLine } from "@/lib/types";
 import { cn, fmtDate, fmtDateShort } from "@/lib/utils";
 import { ProjectDialog } from "../project-dialog";
@@ -41,7 +40,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ org: s
     if (b.account_id && a && !used.has(b.account_id)) used.add(b.account_id);
     rows.push({ label: b.label, direction: b.direction, budget: b.amount, actual: b.account_id && a ? a.amount : 0 });
   }
-  for (const [accId, a] of byAccount) if (!used.has(accId)) rows.push({ label: `${a.number} · ${a.label}`, direction: a.number.startsWith("7") ? "income" : "expense", budget: 0, actual: a.amount });
+  for (const [accId, a] of byAccount) if (!used.has(accId)) rows.push({ label: a.label, direction: a.number.startsWith("7") ? "income" : "expense", budget: 0, actual: a.amount });
 
   const sum = (dir: "income" | "expense", k: "budget" | "actual") => rows.filter((r) => r.direction === dir).reduce((t, r) => t + r[k], 0);
   const bi = sum("income", "budget"), be = sum("expense", "budget"), ai = sum("income", "actual"), ae = sum("expense", "actual");
@@ -51,7 +50,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ org: s
       <Link href={`/app/${slug}/projets`} className="mb-3 inline-flex items-center gap-1 text-[13px] text-muted hover:text-foreground"><ArrowLeft className="size-3.5" /> Projets</Link>
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2"><span className="size-3 rounded-full" style={{ background: project.color }} /><h1 className="text-[22px] font-semibold tracking-[-0.02em]">{project.name}</h1></div>
+          <div className="flex items-center gap-2"><span className="size-3 rounded-full" style={{ background: project.color }} /><h1 className="text-[24px] font-semibold tracking-[-0.025em]">{project.name}</h1></div>
           <p className="mt-1 text-[13px] text-muted">{project.kind === "event" ? "Événement" : "Projet"}{project.start_date ? ` · ${fmtDate(project.start_date)}` : ""}{project.end_date && project.end_date !== project.start_date ? ` → ${fmtDate(project.end_date)}` : ""}</p>
           {project.description && <p className="mt-2 max-w-2xl text-[13px] text-muted">{project.description}</p>}
         </div>
@@ -72,17 +71,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ org: s
         ))}
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <Card>
-          <CardHeader><div><CardTitle>Budget et réalisé</CardTitle><CardDescription>Par poste</CardDescription></div></CardHeader>
-          <CardContent>
-            {rows.length ? (
-              <PairedBars data={rows.map((r) => ({ poste: r.label.length > 18 ? `${r.label.slice(0, 17)}…` : r.label, budget: r.budget, realise: r.actual }))} xKey="poste" series={[{ key: "budget", label: "Budget" }, { key: "realise", label: "Réalisé" }]} height={220} />
-            ) : (
-              <p className="py-8 text-center text-[13px] text-muted">Ajoutez des lignes de budget ou imputez des opérations à ce projet.</p>
-            )}
-          </CardContent>
-        </Card>
+      <div>
         <BudgetEditor
           orgId={org.id}
           projectId={project.id}
@@ -94,14 +83,14 @@ export default async function ProjectPage({ params }: { params: Promise<{ org: s
       </div>
 
       <Card className="mt-6">
-        <CardHeader><CardTitle>Opérations imputées</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Recettes et dépenses du projet</CardTitle></CardHeader>
         {actual.length ? (
           <ul className="divide-y divide-border border-t border-border">
             {actual.map((l, i) => (
               <li key={i} className="flex items-center gap-4 px-5 py-2.5 text-[13px]">
                 <span className="w-14 text-xs text-muted tabular">{fmtDateShort(l.date)}</span>
                 <span className="min-w-0 flex-1 truncate">{l.label}</span>
-                <span className="hidden text-xs text-muted sm:block">{l.account_number} · {l.account_label}</span>
+                <span className="hidden text-xs text-muted sm:block">{l.account_label}</span>
                 <Amount cents={l.account_number.startsWith("7") ? Number(l.credit) - Number(l.debit) : -(Number(l.debit) - Number(l.credit))} signed colored className="w-24 text-right font-medium" />
               </li>
             ))}

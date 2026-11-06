@@ -20,7 +20,7 @@ export function ProjectDialog({ orgId, project, defaultOpen }: { orgId: string; 
   const router = useRouter();
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{project ? <Button size="sm"><Pencil /> Modifier</Button> : <Button variant="primary"><Plus /> Nouveau</Button>}</DialogTrigger>
+      <DialogTrigger asChild>{project ? <Button size="sm"><Pencil /> Modifier</Button> : <Button variant="primary"><Plus /> Nouveau projet</Button>}</DialogTrigger>
       <DialogContent title={project ? "Modifier" : "Nouveau projet ou événement"}>
         <form
           action={(fd) =>

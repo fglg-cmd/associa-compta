@@ -25,7 +25,7 @@ export function BudgetEditor({ orgId, projectId, canWrite, lines, rows, accounts
 
   return (
     <Card>
-      <CardHeader><CardTitle>Lignes budgétaires</CardTitle></CardHeader>
+      <CardHeader><CardTitle>Budget prévu et réalisé</CardTitle></CardHeader>
       <div className="border-t border-border">
         <table className="w-full text-[13px] tabular">
           <thead className="text-left text-xs text-muted"><tr><th className="py-2 pl-5 font-medium">Poste</th><th className="text-right font-medium">Budget</th><th className="text-right font-medium">Réalisé</th><th className="pr-5 text-right font-medium">Écart</th><th className="w-8" /></tr></thead>

@@ -18,7 +18,7 @@ export function ImportMembersDialog({ orgId }: { orgId: string }) {
   const router = useRouter();
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild><Button variant="ghost"><FileUp /> Importer</Button></DialogTrigger>
+      <DialogTrigger asChild><Button variant="ghost"><FileUp /> Importer un fichier</Button></DialogTrigger>
       <DialogContent title="Importer des adhérents" description="Fichier CSV (exporté depuis Excel, Google Sheets ou HelloAsso) avec une ligne d'en-tête.">
         <form
           action={(fd) =>

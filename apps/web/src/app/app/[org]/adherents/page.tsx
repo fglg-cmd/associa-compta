@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Users } from "lucide-react";
+import { ChevronRight, Users } from "lucide-react";
 import { getOrgContext } from "@/lib/auth";
 import { features } from "@/lib/env";
 import { createClient } from "@/lib/supabase/server";
@@ -9,7 +9,7 @@ import { PageHeader, EmptyState, Amount } from "@/components/ui/misc";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { FeeType, Member, MemberFee } from "@/lib/types";
-import { cn, fmtDate, todayISO } from "@/lib/utils";
+import { cn, fmtDate, initials, todayISO } from "@/lib/utils";
 import { MemberDialog } from "./member-dialog";
 import { FeesToolbar, ImportMembersDialog } from "./toolbar";
 
@@ -50,7 +50,9 @@ export default async function MembersPage({ params, searchParams }: { params: Pr
     const late = open.some((f) => f.due_date < today);
     return { key: late ? "late" : "due", label: late ? "En retard" : "À régler", tone: late ? ("negative" as const) : ("warning" as const), due };
   };
-  const filtered = sp.paiement ? members.filter((m) => status(m.id).key === sp.paiement) : members;
+  // « À régler » regroupe les cotisations à échéance et en retard (badge distinct).
+  const matches = (key: string) => (sp.paiement === "due" || sp.paiement === "late" ? key === "due" || key === "late" : key === sp.paiement);
+  const filtered = sp.paiement ? members.filter((m) => matches(status(m.id).key)) : members;
   const active = members.filter((m) => m.status === "active").length;
   const upToDate = members.filter((m) => status(m.id).key === "paid").length;
   const outstanding = fees.filter((f) => f.status === "due" || f.status === "partial").reduce((t, f) => t + f.amount_due - f.amount_paid, 0);
@@ -62,11 +64,27 @@ export default async function MembersPage({ params, searchParams }: { params: Pr
     return `${base}?${u}`;
   };
 
+  const counts = { all: members.length, paid: 0, due: 0, none: 0 };
+  for (const m of members) {
+    const k = status(m.id).key;
+    if (k === "paid") counts.paid++;
+    else if (k === "due" || k === "late") counts.due++;
+    else counts.none++;
+  }
+  const ratio = members.length ? Math.round((upToDate / members.length) * 100) : 0;
+  const FILTERS = [
+    { k: "", l: "Tous", n: counts.all },
+    { k: "paid", l: "À jour", n: counts.paid },
+    { k: "due", l: "À régler", n: counts.due },
+    { k: "none", l: "Sans cotisation", n: counts.none },
+  ];
+  const currentFilter = sp.paiement === "late" ? "due" : sp.paiement ?? "";
+
   return (
     <>
       <PageHeader
         title="Adhérents"
-        description="Membres, cotisations et relances. Chaque paiement enregistré passe automatiquement en comptabilité."
+        description="Vos membres et leurs cotisations. Chaque paiement est comptabilisé automatiquement."
         actions={canWrite && (
           <>
             <ImportMembersDialog orgId={org.id} />
@@ -76,42 +94,69 @@ export default async function MembersPage({ params, searchParams }: { params: Pr
         )}
       />
 
-      <div className="mb-6 grid gap-3 sm:grid-cols-3">
-        <Card className="p-4"><div className="text-[13px] text-muted">Adhérents actifs</div><div className="mt-1 text-xl font-semibold tabular">{active}</div></Card>
-        <Card className="p-4"><div className="text-[13px] text-muted">À jour de cotisation</div><div className="mt-1 text-xl font-semibold tabular">{upToDate}<span className="text-sm font-normal text-muted"> / {members.length}</span></div></Card>
-        <Card className="p-4"><div className="text-[13px] text-muted">Reste à encaisser</div><div className="mt-1 text-xl font-semibold"><Amount cents={outstanding} /></div>{overdueCount > 0 && <div className="text-xs text-negative">{overdueCount} cotisation(s) en retard</div>}</Card>
-      </div>
+      {members.length > 0 && (
+        <Card className="mb-6 grid divide-y divide-border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          <div className="p-4">
+            <div className="text-[13px] text-muted">Adhérents actifs</div>
+            <div className="mt-1 text-[22px] font-semibold tracking-[-0.02em] tabular">{active}</div>
+          </div>
+          <div className="p-4">
+            <div className="flex items-baseline justify-between text-[13px] text-muted"><span>À jour de cotisation</span><span className="text-xs tabular">{ratio} %</span></div>
+            <div className="mt-1 text-[22px] font-semibold tracking-[-0.02em] tabular">{upToDate}<span className="text-[15px] font-normal text-muted"> sur {members.length}</span></div>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-surface-2"><div className="h-full rounded-full bg-positive" style={{ width: `${ratio}%` }} /></div>
+          </div>
+          <div className="p-4">
+            <div className="text-[13px] text-muted">Reste à encaisser</div>
+            <div className="mt-1 text-[22px] font-semibold tracking-[-0.02em]"><Amount cents={outstanding} /></div>
+            {overdueCount > 0 && <div className="mt-0.5 text-xs font-medium text-negative">dont {overdueCount} en retard</div>}
+          </div>
+        </Card>
+      )}
 
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <div className="inline-flex rounded-lg border border-border bg-surface-2 p-0.5">
-          {[["", "Tous"], ["paid", "À jour"], ["due", "À régler"], ["late", "En retard"], ["none", "Sans cotisation"]].map(([k, l]) => (
-            <Link key={k} href={link({ paiement: k || undefined })} className={cn("rounded-md px-2.5 py-1 text-[13px] font-medium", (sp.paiement ?? "") === k ? "bg-surface shadow-sm" : "text-muted hover:text-foreground")}>{l}</Link>
-          ))}
+      {members.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <div className="inline-flex flex-wrap rounded-lg border border-border bg-surface-2 p-0.5">
+            {FILTERS.map(({ k, l, n }) => (
+              <Link key={k} href={link({ paiement: k || undefined })} className={cn("flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[13px] font-medium", currentFilter === k ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-foreground")}>
+                {l}<span className="text-xs text-subtle tabular">{n}</span>
+              </Link>
+            ))}
+          </div>
+          <form action={base} className="ml-auto">
+            <input name="q" defaultValue={sp.q} placeholder="Rechercher un adhérent…" className="h-8 w-56 rounded-md border border-border bg-surface px-2.5 text-sm shadow-xs focus:border-accent focus:outline-none" />
+          </form>
         </div>
-        <form action={base} className="ml-auto">
-          <input name="q" defaultValue={sp.q} placeholder="Nom, prénom, e-mail…" className="h-8 w-56 rounded-md border border-border bg-surface px-2.5 text-sm shadow-xs focus:border-accent focus:outline-none" />
-        </form>
-      </div>
+      )}
 
       <Card className="overflow-hidden">
         {filtered.length === 0 ? (
-          <EmptyState icon={Users} title={members.length ? "Aucun adhérent ne correspond" : "Aucun adhérent"} description={members.length ? undefined : "Ajoutez vos adhérents un par un ou importez votre fichier existant (CSV)."} />
+          <EmptyState
+            icon={Users}
+            title={members.length ? "Aucun adhérent ne correspond" : "Ajoutez vos adhérents"}
+            description={members.length ? "Essayez un autre filtre ou une autre recherche." : "Un par un avec « Ajouter un adhérent », ou d'un coup en important votre fichier Excel ou HelloAsso (CSV)."}
+          />
         ) : (
-          <table className="w-full text-[13px]">
+          <table className="w-full text-[13.5px]">
             <thead className="border-b border-border text-left text-xs text-muted">
-              <tr><th className="py-2 pl-5 font-medium">N°</th><th className="font-medium">Nom</th><th className="hidden font-medium md:table-cell">Contact</th><th className="hidden font-medium sm:table-cell">Adhésion</th><th className="font-medium">Cotisation</th><th className="pr-5 text-right font-medium">Reste dû</th></tr>
+              <tr><th className="py-2.5 pl-5 font-medium">Adhérent</th><th className="font-medium">Cotisation</th><th className="pr-5 text-right font-medium">Reste dû</th><th className="w-8" /></tr>
             </thead>
             <tbody className="divide-y divide-border">
               {filtered.map((m) => {
                 const s = status(m.id);
                 return (
-                  <tr key={m.id} className="hover:bg-surface-2/60">
-                    <td className="py-2.5 pl-5 text-xs text-muted tabular">{m.member_number}</td>
-                    <td><Link href={`${base}/${m.id}`} className="font-medium hover:text-accent">{m.last_name.toUpperCase()} {m.first_name}</Link>{m.status !== "active" && <Badge className="ml-2">{m.status === "inactive" ? "Inactif" : "En attente"}</Badge>}</td>
-                    <td className="hidden text-muted md:table-cell">{m.email ?? m.phone ?? "—"}</td>
-                    <td className="hidden text-muted sm:table-cell">{fmtDate(m.joined_at)}</td>
+                  <tr key={m.id} className="group relative transition-colors hover:bg-surface-2/50">
+                    <td className="py-2.5 pl-5">
+                      <Link href={`${base}/${m.id}`} className="flex items-center gap-3 after:absolute after:inset-0">
+                        <span className="grid size-8 shrink-0 place-items-center rounded-full bg-surface-2 text-[11px] font-semibold text-muted">{initials(`${m.first_name} ${m.last_name}`)}</span>
+                        <span className="min-w-0">
+                          <span className="block truncate font-medium">{m.first_name} {m.last_name}{m.status !== "active" && <Badge className="ml-2">{m.status === "inactive" ? "Inactif" : "En attente"}</Badge>}</span>
+                          <span className="block truncate text-xs text-muted">{m.email ?? m.phone ?? `Adhérent depuis le ${fmtDate(m.joined_at)}`}</span>
+                        </span>
+                      </Link>
+                    </td>
                     <td><Badge tone={s.tone} dot>{s.label}</Badge></td>
-                    <td className="pr-5 text-right tabular">{s.due ? <Amount cents={s.due} /> : <span className="text-subtle">—</span>}</td>
+                    <td className="pr-5 text-right font-medium tabular">{s.due ? <Amount cents={s.due} /> : <span className="text-subtle">—</span>}</td>
+                    <td className="pr-4"><ChevronRight className="size-4 text-subtle transition-transform group-hover:translate-x-0.5" /></td>
                   </tr>
                 );
               })}

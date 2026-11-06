@@ -49,7 +49,7 @@ export function AgReport({ orgId, fiscalYearId, aiEnabled }: { orgId: string; fi
 
   return (
     <div className="grid gap-3">
-      <Textarea value={text} onChange={(e) => setText(e.target.value)} rows={16} placeholder={aiEnabled ? "Cliquez sur « Rédiger avec l'assistant » ou écrivez votre rapport ici…" : "Rédigez ici le rapport du trésorier (facultatif) : il sera inclus en tête du dossier PDF."} className="text-[13.5px] leading-relaxed" />
+      <Textarea value={text} onChange={(e) => setText(e.target.value)} rows={7} placeholder={aiEnabled ? "Cliquez sur « Rédiger avec l'assistant » ou écrivez votre rapport ici…" : "Rédigez ici le rapport du trésorier (facultatif) : il sera inclus en tête du dossier PDF."} className="text-[13.5px] leading-relaxed" />
       <div className="flex flex-wrap justify-end gap-2">
         {aiEnabled && <Button onClick={generate} loading={busy}><Sparkles /> {text ? "Régénérer" : "Rédiger avec l'assistant"}</Button>}
         <Button variant="primary" onClick={download} loading={downloading} disabled={busy}><Download /> Télécharger le dossier d&apos;AG (PDF)</Button>

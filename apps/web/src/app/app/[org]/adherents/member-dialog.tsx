@@ -18,7 +18,7 @@ export function MemberDialog({ orgId, member, defaultOpen }: { orgId: string; me
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {member ? <Button size="sm"><Pencil /> Modifier</Button> : <Button variant="primary"><UserPlus /> Adhérent</Button>}
+        {member ? <Button size="sm"><Pencil /> Modifier</Button> : <Button variant="primary"><UserPlus /> Ajouter un adhérent</Button>}
       </DialogTrigger>
       <DialogContent title={member ? "Modifier l'adhérent" : "Nouvel adhérent"}>
         <form

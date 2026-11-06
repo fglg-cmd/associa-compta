@@ -30,6 +30,36 @@ function Section({ s, total }: { s: StatementSection; total?: boolean }) {
   );
 }
 
+/** Répartition lisible d'une section (« d'où vient l'argent », « où va l'argent »). */
+function Breakdown({ title, s, color, empty }: { title: string; s: StatementSection; color: string; empty: string }) {
+  const lines = s.lines.filter((l) => l.amount > 0).sort((a, b) => b.amount - a.amount);
+  const max = lines[0]?.amount ?? 0;
+  return (
+    <Card>
+      <CardHeader><CardTitle>{title}</CardTitle><span className="text-[13px] font-semibold tabular"><Amount cents={s.total} /></span></CardHeader>
+      <CardContent>
+        {lines.length === 0 ? (
+          <p className="py-6 text-center text-[13px] text-muted">{empty}</p>
+        ) : (
+          <ul className="grid gap-3">
+            {lines.slice(0, 6).map((l) => (
+              <li key={l.key}>
+                <div className="flex items-baseline justify-between gap-3 text-[13px]">
+                  <span className="truncate">{l.label}</span>
+                  <span className="shrink-0 font-medium tabular"><Amount cents={l.amount} /> <span className="ml-1 text-xs font-normal text-muted">{s.total ? Math.round((l.amount / s.total) * 100) : 0} %</span></span>
+                </div>
+                <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-surface-2">
+                  <div className="h-full rounded-full" style={{ width: `${max ? Math.max(3, (l.amount / max) * 100) : 0}%`, background: color }} />
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 const Row = ({ label, value, strong }: { label: string; value: number; strong?: boolean }) => (
   <div className={cn("flex justify-between py-1.5 text-[13px]", strong && "border-t border-border font-semibold")}><span>{label}</span><Amount cents={value} /></div>
 );
@@ -40,12 +70,17 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
   const { org, canWrite } = await getOrgContext(slug);
   const [fy, years] = await Promise.all([resolveFiscalYear(org.id, sp.exercice), getFiscalYears(org.id)]);
   const st = await getStatements(org.id, fy);
-  const tab = ["resultat", "bilan", "ag", "exports"].includes(sp.onglet ?? "") ? sp.onglet! : "resultat";
+  // « ag » (ancien onglet) mène au résumé, qui contient la préparation de l'AG.
+  const tab = ["resultat", "bilan", "exports"].includes(sp.onglet ?? "") ? sp.onglet! : "resume";
   const is = st.income;
   const bs = st.balance;
   const ex = (r: string, f: string) => `/api/exports/${org.id}?rapport=${r}&format=${f}&exercice=${fy.id}`;
   const link = (t: string) => `/app/${slug}/rapports?onglet=${t}${sp.exercice ? `&exercice=${sp.exercice}` : ""}`;
 
+  const exportGroups: { title: string; items: string[] }[] = [
+    { title: "Pour l'assemblée générale", items: ["ag", "compte-resultat", "bilan", "adherents"] },
+    { title: "Pour l'expert-comptable", items: ["balance", "grand-livre", "journal", "fec"] },
+  ];
   const exports = [
     { r: "compte-resultat", t: "Compte de résultat", d: "Présentation ANC 2018-06", f: ["pdf", "xlsx", "csv"] },
     { r: "bilan", t: "Bilan", d: "Actif et passif à la clôture", f: ["pdf", "xlsx", "csv"] },
@@ -61,11 +96,32 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
     <>
       <PageHeader title="Rapports" description={`${fy.label} · du ${fmtDate(fy.start_date)} au ${fmtDate(fy.end_date)}${fy.status === "open" ? " · exercice en cours" : ""}`} actions={<FiscalYearPicker years={years} current={fy.id} />}>
         <div className="flex flex-wrap gap-1 border-b border-border">
-          {[["resultat", "Compte de résultat"], ["bilan", "Bilan"], ["ag", "Assemblée générale"], ["exports", "Exports"]].map(([k, l]) => (
-            <Link key={k} href={link(k!)} className={cn("-mb-px border-b-2 px-3 py-2 text-[13px] font-medium", tab === k ? "border-accent text-foreground" : "border-transparent text-muted hover:text-foreground")}>{l}</Link>
+          {[["resume", "Résumé"], ["resultat", "Compte de résultat"], ["bilan", "Bilan"], ["exports", "Téléchargements"]].map(([k, l]) => (
+            <Link key={k} href={k === "resume" ? `/app/${slug}/rapports${sp.exercice ? `?exercice=${sp.exercice}` : ""}` : link(k!)} className={cn("-mb-px border-b-2 px-3 py-2 text-[13px] font-medium", tab === k ? "border-accent text-foreground" : "border-transparent text-muted hover:text-foreground")}>{l}</Link>
           ))}
         </div>
       </PageHeader>
+
+      {tab === "resume" && (
+        <div className="grid gap-6">
+          <Card className="grid divide-y divide-border sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+            <div className="p-5"><div className="text-[13px] text-muted">Recettes</div><div className="mt-1 text-[24px] font-semibold tracking-[-0.025em]"><Amount cents={is.totalIncome} /></div></div>
+            <div className="p-5"><div className="text-[13px] text-muted">Dépenses</div><div className="mt-1 text-[24px] font-semibold tracking-[-0.025em]"><Amount cents={is.totalExpenses} /></div></div>
+            <div className="p-5">
+              <div className="text-[13px] text-muted">{is.netResult >= 0 ? "Excédent" : "Déficit"}</div>
+              <div className={cn("mt-1 text-[24px] font-semibold tracking-[-0.025em]", is.netResult >= 0 ? "text-positive" : "text-negative")}><Amount cents={is.netResult} signed /></div>
+            </div>
+          </Card>
+          <div className="grid gap-6 lg:grid-cols-2">
+            <Breakdown title="D'où vient l'argent" s={is.operatingIncome} color="var(--chart-1)" empty="Aucune recette sur cet exercice." />
+            <Breakdown title="Où va l'argent" s={is.operatingExpenses} color="var(--chart-2)" empty="Aucune dépense sur cet exercice." />
+          </div>
+          <Card>
+            <CardHeader><div><CardTitle>Préparer l&apos;assemblée générale</CardTitle><CardDescription>{features.ai ? <>L&apos;assistant peut rédiger un premier jet du rapport du trésorier. Relisez-le, puis téléchargez le dossier complet (rapport, compte de résultat, bilan).</> : <>Rédigez le rapport du trésorier (facultatif), puis téléchargez le dossier complet : compte de résultat, bilan et chiffres clés.</>}</CardDescription></div></CardHeader>
+            <CardContent><AgReport orgId={org.id} fiscalYearId={fy.id} aiEnabled={features.ai && canWrite} /></CardContent>
+          </Card>
+        </div>
+      )}
 
       {tab === "resultat" && (
         <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
@@ -98,21 +154,28 @@ export default async function ReportsPage({ params, searchParams }: { params: Pr
         </div>
       )}
 
-      {tab === "ag" && (
-        <Card>
-          <CardHeader><div><CardTitle>Rapport financier de l&apos;assemblée générale</CardTitle><CardDescription>{features.ai ? <>L&apos;assistant rédige un premier jet à partir de vos comptes ; relisez-le, modifiez-le, puis téléchargez le dossier PDF complet.</> : <>Rédigez le rapport du trésorier, puis téléchargez le dossier PDF complet : compte de résultat, bilan et chiffres clés.</>}</CardDescription></div></CardHeader>
-          <CardContent><AgReport orgId={org.id} fiscalYearId={fy.id} aiEnabled={features.ai && canWrite} /></CardContent>
-        </Card>
-      )}
-
       {tab === "exports" && (
-        <div className="grid gap-3 md:grid-cols-2">
-          {exports.map((e) => (
-            <Card key={e.r} className="flex items-center gap-4 p-4">
-              <span className="grid size-9 place-items-center rounded-lg bg-surface-2 border border-border">{e.f.includes("pdf") ? <FileText className="size-4 text-muted" /> : e.r === "fec" ? <Table2 className="size-4 text-muted" /> : <FileSpreadsheet className="size-4 text-muted" />}</span>
-              <div className="min-w-0 flex-1"><div className="text-[13px] font-medium">{e.t}</div><div className="text-xs text-muted">{e.d}</div></div>
-              <div className="flex gap-1">{e.f.map((f) => <a key={f} href={ex(e.r, f)} className="rounded-md border border-border px-2 py-1 text-xs font-medium uppercase hover:bg-surface-2">{f === "txt" ? "FEC" : f}</a>)}</div>
-            </Card>
+        <div className="grid gap-8">
+          {exportGroups.map((g) => (
+            <section key={g.title}>
+              <h2 className="mb-3 text-[13px] font-semibold text-muted">{g.title}</h2>
+              <Card className="divide-y divide-border overflow-hidden">
+                {g.items.map((key) => {
+                  const e = exports.find((x) => x.r === key)!;
+                  const [main, ...others] = e.f;
+                  return (
+                    <div key={e.r} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3.5">
+                      <span className="grid size-9 shrink-0 place-items-center rounded-lg border border-border bg-surface-2">{e.f.includes("pdf") ? <FileText className="size-4 text-muted" /> : e.r === "fec" ? <Table2 className="size-4 text-muted" /> : <FileSpreadsheet className="size-4 text-muted" />}</span>
+                      <div className="min-w-0 flex-1"><div className="text-[13.5px] font-medium">{e.t}</div><div className="text-xs text-muted">{e.d}</div></div>
+                      <div className="flex items-center gap-2">
+                        {others.map((f) => <a key={f} href={ex(e.r, f)} className="text-xs font-medium uppercase text-muted hover:text-foreground">{f}</a>)}
+                        <a href={ex(e.r, main!)} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-surface px-3 text-[13px] font-medium shadow-xs hover:bg-surface-2"><Download className="size-3.5" /> {main === "txt" ? "FEC" : main!.toUpperCase()}</a>
+                      </div>
+                    </div>
+                  );
+                })}
+              </Card>
+            </section>
           ))}
         </div>
       )}

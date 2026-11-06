@@ -1,15 +1,14 @@
 import Link from "next/link";
-import { CalendarDays, FolderKanban } from "lucide-react";
+import { CalendarDays, ChevronRight, FolderKanban } from "lucide-react";
 import { getOrgContext } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, EmptyState, Amount } from "@/components/ui/misc";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import type { Project } from "@/lib/types";
 import { cn, fmtDate } from "@/lib/utils";
 import { ProjectDialog } from "./project-dialog";
 
-export const metadata = { title: "Projets et événements" };
+export const metadata = { title: "Projets" };
 
 type Fin = { project_id: string; budget_income: number; budget_expense: number; actual_income: number; actual_expense: number };
 
@@ -29,45 +28,54 @@ export default async function ProjectsPage({ params, searchParams }: { params: P
   return (
     <>
       <PageHeader
-        title="Projets et événements"
-        description="Un budget par projet, le réalisé en temps réel, la rentabilité de chaque événement."
+        title="Projets"
+        description="Un budget par événement ou projet, et ce qu'il rapporte vraiment."
         actions={canWrite && <ProjectDialog orgId={org.id} defaultOpen={sp.action === "creer"} />}
       />
       <div className="mb-4 inline-flex rounded-lg border border-border bg-surface-2 p-0.5">
-        <Link href={`/app/${slug}/projets`} className={cn("rounded-md px-2.5 py-1 text-[13px] font-medium", !showClosed ? "bg-surface shadow-sm" : "text-muted")}>En cours</Link>
-        <Link href={`/app/${slug}/projets?vue=clotures`} className={cn("rounded-md px-2.5 py-1 text-[13px] font-medium", showClosed ? "bg-surface shadow-sm" : "text-muted")}>Clôturés</Link>
+        <Link href={`/app/${slug}/projets`} className={cn("rounded-md px-2.5 py-1 text-[13px] font-medium", !showClosed ? "bg-surface shadow-sm" : "text-muted hover:text-foreground")}>En cours</Link>
+        <Link href={`/app/${slug}/projets?vue=clotures`} className={cn("rounded-md px-2.5 py-1 text-[13px] font-medium", showClosed ? "bg-surface shadow-sm" : "text-muted hover:text-foreground")}>Terminés</Link>
       </div>
       {list.length === 0 ? (
-        <Card><EmptyState icon={FolderKanban} title="Aucun projet" description="Créez un projet ou un événement (kermesse, tournoi, séjour…), puis rattachez-y vos recettes et dépenses lors de la catégorisation." /></Card>
+        <Card>
+          <EmptyState
+            icon={FolderKanban}
+            title={showClosed ? "Aucun projet terminé" : "Suivez vos événements"}
+            description={showClosed ? undefined : "Kermesse, tournoi, séjour… Créez-le, puis choisissez-le quand vous validez une recette ou une dépense : vous saurez ce qu'il a rapporté."}
+          />
+        </Card>
       ) : (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {list.map((p) => {
             const f = finBy.get(p.id) ?? { bi: 0, be: 0, ai: 0, ae: 0 };
             const result = f.ai - f.ae;
-            const budgetResult = f.bi - f.be;
             const spent = f.be ? Math.min(100, Math.round((f.ae / f.be) * 100)) : 0;
             return (
-              <Link key={p.id} href={`/app/${slug}/projets/${p.id}`}>
-                <Card className="h-full p-4 transition-shadow hover:shadow-md">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="size-2.5 rounded-full" style={{ background: p.color }} />
-                      <span className="font-medium">{p.name}</span>
-                    </div>
-                    <Badge tone={p.kind === "event" ? "accent" : "neutral"}>{p.kind === "event" ? "Événement" : "Projet"}</Badge>
+              <Link key={p.id} href={`/app/${slug}/projets/${p.id}`} className="group">
+                <Card className="flex h-full flex-col p-5 transition-[border-color,box-shadow] group-hover:border-border-strong group-hover:shadow-sm">
+                  <div className="flex items-center gap-2.5">
+                    <span className="size-2.5 shrink-0 rounded-full" style={{ background: p.color }} />
+                    <span className="min-w-0 flex-1 truncate text-[15px] font-semibold">{p.name}</span>
+                    <ChevronRight className="size-4 shrink-0 text-subtle transition-transform group-hover:translate-x-0.5" />
                   </div>
-                  {(p.start_date || p.end_date) && (
-                    <p className="mt-1 flex items-center gap-1.5 text-xs text-muted"><CalendarDays className="size-3" />{p.start_date ? fmtDate(p.start_date) : "…"}{p.end_date && p.end_date !== p.start_date ? ` → ${fmtDate(p.end_date)}` : ""}</p>
-                  )}
-                  <dl className="mt-4 grid grid-cols-2 gap-y-1 text-[13px]">
-                    <dt className="text-muted">Recettes</dt><dd className="text-right tabular"><Amount cents={f.ai} />{f.bi ? <span className="text-xs text-muted"> / <Amount cents={f.bi} /></span> : null}</dd>
-                    <dt className="text-muted">Dépenses</dt><dd className="text-right tabular"><Amount cents={f.ae} />{f.be ? <span className="text-xs text-muted"> / <Amount cents={f.be} /></span> : null}</dd>
-                    <dt className="font-medium">Résultat</dt><dd className={cn("text-right font-semibold tabular", result < 0 && "text-negative", result > 0 && "text-positive")}><Amount cents={result} signed /></dd>
-                  </dl>
+                  <p className="mt-1 flex items-center gap-1.5 pl-5 text-xs text-muted">
+                    {p.kind === "event" ? "Événement" : "Projet"}
+                    {p.start_date && <><span aria-hidden>·</span><CalendarDays className="size-3" />{fmtDate(p.start_date)}{p.end_date && p.end_date !== p.start_date ? ` → ${fmtDate(p.end_date)}` : ""}</>}
+                  </p>
+                  <div className="mt-5 flex items-end justify-between gap-3">
+                    <div>
+                      <div className="text-xs text-muted">Résultat</div>
+                      <div className={cn("text-[22px] font-semibold tracking-[-0.02em] tabular", result < 0 && "text-negative", result > 0 && "text-positive")}><Amount cents={result} signed /></div>
+                    </div>
+                    <div className="text-right text-xs text-muted tabular">
+                      <div><Amount cents={f.ai} /> de recettes</div>
+                      <div><Amount cents={f.ae} /> de dépenses</div>
+                    </div>
+                  </div>
                   {f.be > 0 && (
-                    <div className="mt-3">
+                    <div className="mt-4">
                       <div className="h-1.5 overflow-hidden rounded-full bg-surface-2"><div className={cn("h-full rounded-full", spent >= 100 ? "bg-negative" : "bg-chart-1")} style={{ width: `${spent}%` }} /></div>
-                      <p className="mt-1 text-xs text-muted">{spent} % du budget de dépenses consommé · prévu <Amount cents={budgetResult} signed /></p>
+                      <p className="mt-1.5 text-xs text-muted">{spent} % du budget de dépenses utilisé</p>
                     </div>
                   )}
                 </Card>

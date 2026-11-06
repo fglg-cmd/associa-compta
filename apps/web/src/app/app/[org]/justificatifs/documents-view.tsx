@@ -76,7 +76,7 @@ export function DocumentsView({ orgId, docs, canWrite, folders, transactions, op
   if (!docs.length) {
     return (
       <Card>
-        <EmptyState icon={FolderOpen} title={searching ? "Aucun document trouvé" : "Aucun document"} description={searching ? "La recherche porte sur le nom, le fournisseur et le texte lu dans les documents." : "Ajoutez vos factures et reçus : ils seront lus et rattachés automatiquement à vos mouvements bancaires."} />
+        <EmptyState icon={FolderOpen} title={searching ? "Aucun document trouvé" : "Aucun justificatif pour l'instant"} description={searching ? "La recherche porte sur le nom, le fournisseur et le texte lu dans les documents." : "Cliquez sur « Ajouter » ou prenez en photo un ticket : le montant, la date et le fournisseur sont lus automatiquement."} />
       </Card>
     );
   }
@@ -90,7 +90,7 @@ export function DocumentsView({ orgId, docs, canWrite, folders, transactions, op
             const tx = d.bank_transaction_id ? txById.get(d.bank_transaction_id) : null;
             return (
               <li key={d.id}>
-                <button onClick={() => setSelected(d)} className="flex w-full items-center gap-3 px-4 py-2.5 text-left hover:bg-surface-2/60">
+                <button onClick={() => setSelected(d)} className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-surface-2/50">
                   <span className="grid size-8 shrink-0 place-items-center rounded-lg border border-border bg-surface-2"><Icon className="size-4 text-muted" /></span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-[13px] font-medium">{d.name}</span>
@@ -100,7 +100,7 @@ export function DocumentsView({ orgId, docs, canWrite, folders, transactions, op
                   </span>
                   {d.ocr_status === "processing" && <Badge><Loader2 className="size-3 animate-spin" /> Lecture</Badge>}
                   {d.ocr_status === "failed" && <Badge tone="warning">Illisible</Badge>}
-                  {(d.bank_transaction_id || d.entry_id) ? <Badge tone="positive"><Link2 className="size-3" /> {tx ? fmtDateShort(tx.date) : "Rattaché"}</Badge> : null}
+                  {(d.bank_transaction_id || d.entry_id) ? <Badge tone="positive"><Link2 className="size-3" /> {tx ? `Rattaché au ${fmtDateShort(tx.date)}` : "Rattaché"}</Badge> : <Badge tone="warning">À rattacher</Badge>}
                   <span className="w-24 text-right text-[13px] font-medium tabular">{d.extracted_amount ? formatEUR(d.extracted_amount) : ""}</span>
                 </button>
               </li>

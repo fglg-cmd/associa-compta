@@ -36,50 +36,57 @@ export default async function DocumentsPage({
   }
 
   const [{ data: folderRows }, { data: txs }] = await Promise.all([
-    supabase.from("documents").select("folder").eq("organization_id", org.id),
+    supabase.from("documents").select("folder, bank_transaction_id, entry_id").eq("organization_id", org.id),
     supabase.from("bank_transactions").select("id, date, label, amount").eq("organization_id", org.id).lt("amount", 0).neq("status", "ignored").order("date", { ascending: false }).limit(300),
   ]);
   const counts = new Map<string, number>();
   for (const r of folderRows ?? []) counts.set(r.folder as string, (counts.get(r.folder as string) ?? 0) + 1);
   const folders = [...new Set([...DEFAULT_FOLDERS, ...counts.keys()])];
   const total = folderRows?.length ?? 0;
+  const unlinked = (folderRows ?? []).filter((r) => !r.bank_transaction_id && !r.entry_id).length;
+  const usedFolders = folders.filter((f) => counts.get(f));
   const base = `/app/${slug}/justificatifs`;
-  const pill = (active: boolean) => cn("flex items-center justify-between rounded-md px-2.5 py-1.5 text-[13px]", active ? "bg-surface font-medium shadow-xs border border-border" : "border border-transparent text-muted hover:bg-surface-2 hover:text-foreground");
+  const tab = (active: boolean) => cn("flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[13px] font-medium", active ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-foreground");
+  const chip = (active: boolean) => cn("rounded-full border px-3 py-1 text-[12.5px]", active ? "border-foreground bg-foreground text-background" : "border-border text-muted hover:text-foreground");
 
   return (
     <>
       <PageHeader
         title="Justificatifs"
-        description="Factures, reçus, statuts, PV d'AG : tout est stocké, lu automatiquement et retrouvable en quelques secondes."
+        description="Factures et reçus : déposez-les, ils sont lus et rattachés à vos dépenses."
         actions={canWrite && <Uploader orgId={org.id} folders={folders} defaultFolder={sp.dossier ?? "Justificatifs"} txId={sp.tx} defaultOpen={sp.action === "ajouter"} />}
       />
-      <div className="grid gap-6 lg:grid-cols-[200px_1fr]">
-        <aside className="grid content-start gap-0.5">
-          <Link href={base} className={pill(!sp.dossier && !sp.filtre)}>Tous <span className="text-xs tabular">{total}</span></Link>
-          <Link href={`${base}?filtre=non-rattaches`} className={pill(sp.filtre === "non-rattaches")}>Non rattachés</Link>
-          <div className="my-2 h-px bg-border" />
-          {folders.map((f) => (
-            <Link key={f} href={`${base}?dossier=${encodeURIComponent(f)}`} className={pill(sp.dossier === f)}>
-              <span className="truncate">{f}</span>
-              {counts.get(f) ? <span className="text-xs tabular">{counts.get(f)}</span> : null}
-            </Link>
-          ))}
-        </aside>
-        <div>
-          <form action={base} className="mb-4">
-            <input name="q" defaultValue={sp.q} placeholder="Rechercher dans le contenu des documents : « assurance 2026 », « leroy merlin »…" className="h-9 w-full rounded-lg border border-border bg-surface px-3 text-sm shadow-xs focus:border-accent focus:outline-none focus:ring-3 focus:ring-accent/15" />
-          </form>
-          <DocumentsView
-            orgId={org.id}
-            docs={docs}
-            canWrite={canWrite}
-            folders={folders}
-            transactions={(txs ?? []) as { id: string; date: string; label: string; amount: number }[]}
-            openId={sp.doc}
-            searching={Boolean(sp.q)}
-          />
-        </div>
-      </div>
+      {total > 0 && (
+        <>
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <div className="inline-flex rounded-lg border border-border bg-surface-2 p-0.5">
+              <Link href={base} className={tab(!sp.filtre)}>Tous <span className="text-xs text-subtle tabular">{total}</span></Link>
+              <Link href={`${base}?filtre=non-rattaches`} className={tab(sp.filtre === "non-rattaches")}>À rattacher <span className="text-xs text-subtle tabular">{unlinked}</span></Link>
+            </div>
+            <form action={base} className="ml-auto">
+              <input name="q" defaultValue={sp.q} placeholder="Rechercher dans vos documents…" className="h-8 w-64 rounded-md border border-border bg-surface px-2.5 text-sm shadow-xs focus:border-accent focus:outline-none" />
+            </form>
+          </div>
+          {usedFolders.length > 1 && (
+            <div className="mb-4 flex flex-wrap gap-1.5">
+              {usedFolders.map((f) => (
+                <Link key={f} href={sp.dossier === f ? base : `${base}?dossier=${encodeURIComponent(f)}`} className={chip(sp.dossier === f)}>
+                  {f} <span className="opacity-60 tabular">{counts.get(f)}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+      <DocumentsView
+        orgId={org.id}
+        docs={docs}
+        canWrite={canWrite}
+        folders={folders}
+        transactions={(txs ?? []) as { id: string; date: string; label: string; amount: number }[]}
+        openId={sp.doc}
+        searching={Boolean(sp.q)}
+      />
     </>
   );
 }
