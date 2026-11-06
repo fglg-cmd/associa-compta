@@ -111,7 +111,7 @@ export function NewFeeDialog({ orgId, memberId, feeTypes }: { orgId: string; mem
   const y = new Date().getFullYear();
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild><Button variant="primary"><Plus /> Cotisation</Button></DialogTrigger>
+      <DialogTrigger asChild><Button variant="primary"><Plus /> Ajouter une cotisation</Button></DialogTrigger>
       <DialogContent title="Nouvelle cotisation">
         <form
           action={(fd) =>

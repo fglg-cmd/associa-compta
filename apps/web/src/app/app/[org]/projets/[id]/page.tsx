@@ -66,7 +66,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ org: s
           <Card key={k.l} className="p-4">
             <div className="text-[13px] text-muted">{k.l}</div>
             <div className={cn("mt-1 text-xl font-semibold tabular", k.l === "Résultat" && k.a < 0 && "text-negative")}><Amount cents={k.a} signed={k.l === "Résultat"} /></div>
-            <div className="text-xs text-muted">Budget : <Amount cents={k.b} signed={k.l === "Résultat"} /></div>
+            <div className="text-xs text-muted">{k.b ? <>Prévu : <Amount cents={k.b} signed={k.l === "Résultat"} /></> : "Aucun budget prévu"}</div>
           </Card>
         ))}
       </div>

@@ -26,6 +26,11 @@ export function BudgetEditor({ orgId, projectId, canWrite, lines, rows, accounts
   return (
     <Card>
       <CardHeader><CardTitle>Budget prévu et réalisé</CardTitle></CardHeader>
+      {rows.length === 0 ? (
+        <CardContent className="border-t border-border pt-4">
+          <p className="text-[13px] text-muted">Notez ce que vous prévoyez de dépenser et de gagner (location de salle, buvette, inscriptions…) : vous verrez ensuite l&apos;écart avec le réel.</p>
+        </CardContent>
+      ) : (
       <div className="border-t border-border">
         <table className="w-full text-[13px] tabular">
           <thead className="text-left text-xs text-muted"><tr><th className="py-2 pl-5 font-medium">Poste</th><th className="text-right font-medium">Budget</th><th className="text-right font-medium">Réalisé</th><th className="pr-5 text-right font-medium">Écart</th><th className="w-8" /></tr></thead>
@@ -46,17 +51,19 @@ export function BudgetEditor({ orgId, projectId, canWrite, lines, rows, accounts
           </tbody>
         </table>
       </div>
+      )}
       {canWrite && (
-        <CardContent className="border-t border-border pt-4">
+        <CardContent className="border-t border-border bg-surface-2/40 pt-4">
+          <p className="mb-2 text-[13px] font-medium">Ajouter une ligne</p>
           <form
             action={(fd) => { fd.set("accountId", accountId); act(async () => { const r = await saveBudgetLine(orgId, projectId, null, fd); if (r.ok) setAccountId(""); return r; }); }}
             className="grid gap-2 sm:grid-cols-[110px_1fr_110px_auto]"
           >
             <Select name="direction" defaultValue="expense"><option value="expense">Dépense</option><option value="income">Recette</option></Select>
-            <Input name="label" placeholder="Location de salle" required />
+            <Input name="label" placeholder="Ex. : location de salle" required />
             <Input name="amount" placeholder="0,00 €" inputMode="decimal" required className="text-right" />
             <Button type="submit" loading={pending}><Plus /> Ajouter</Button>
-            <div className="sm:col-span-4"><AccountSelect accounts={accounts} value={accountId} onChange={setAccountId} placeholder="Compte suivi (facultatif, pour comparer au réalisé)" className="h-7 text-xs" /></div>
+            <div className="sm:col-span-4"><AccountSelect labelFirst accounts={accounts} value={accountId} onChange={setAccountId} placeholder="Catégorie à suivre (facultatif) : le réalisé sera calculé automatiquement" className="h-8 text-xs" /></div>
           </form>
         </CardContent>
       )}

@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Amount } from "@/components/ui/misc";
 import type { FeePayment, FeeType, Member, MemberFee } from "@/lib/types";
-import { fmtDate, todayISO } from "@/lib/utils";
+import { fmtDate, todayISO, initials } from "@/lib/utils";
 import { MemberDialog } from "../member-dialog";
 import { FeeActions, NewFeeDialog } from "./fee-actions";
 
@@ -38,17 +38,22 @@ export default async function MemberPage({ params }: { params: Promise<{ org: st
     ]),
   ].sort((a, b) => b.date.localeCompare(a.date));
 
+  const remaining = fees.filter((f) => f.status === "due" || f.status === "partial").reduce((t, f) => t + f.amount_due - f.amount_paid, 0);
+
   return (
     <>
       <Link href={`/app/${slug}/adherents`} className="mb-3 inline-flex items-center gap-1 text-[13px] text-muted hover:text-foreground"><ArrowLeft className="size-3.5" /> Adhérents</Link>
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-xs text-muted tabular">Adhérent n° {member.member_number} · depuis le {fmtDate(member.joined_at)}</p>
-          <h1 className="mt-0.5 text-[22px] font-semibold tracking-[-0.02em]">{member.first_name} {member.last_name}</h1>
+        <div className="flex items-start gap-4">
+          <span className="grid size-12 shrink-0 place-items-center rounded-full bg-accent-soft text-[15px] font-semibold text-accent">{initials(`${member.first_name} ${member.last_name}`)}</span>
+          <div>
+          <h1 className="text-[24px] font-semibold tracking-[-0.025em]">{member.first_name} {member.last_name}</h1>
+          <p className="mt-0.5 text-[13px] text-muted tabular">Adhérent n° {member.member_number} · depuis le {fmtDate(member.joined_at)}{remaining > 0 && <> · <span className="font-medium text-warning">reste <Amount cents={remaining} /> à régler</span></>}</p>
           <div className="mt-2 flex flex-wrap gap-4 text-[13px] text-muted">
             {member.email && <a href={`mailto:${member.email}`} className="inline-flex items-center gap-1.5 hover:text-foreground"><Mail className="size-3.5" /> {member.email}</a>}
             {member.phone && <span className="inline-flex items-center gap-1.5"><Phone className="size-3.5" /> {member.phone}</span>}
             {member.city && <span className="inline-flex items-center gap-1.5"><MapPin className="size-3.5" /> {[member.address_line, member.postal_code, member.city].filter(Boolean).join(", ")}</span>}
+          </div>
           </div>
         </div>
         {canWrite && (
@@ -75,7 +80,7 @@ export default async function MemberPage({ params }: { params: Promise<{ org: st
                       <div className="text-xs text-muted">Échéance {fmtDate(f.due_date)}{f.fee_payments.length ? ` · ${f.fee_payments.length} paiement(s)` : ""}</div>
                     </div>
                     <Badge tone={f.status === "paid" ? "positive" : f.status === "cancelled" ? "neutral" : late ? "negative" : "warning"} dot>
-                      {f.status === "paid" ? "Payée" : f.status === "cancelled" ? "Annulée" : f.status === "partial" ? "Partielle" : late ? "En retard" : "À régler"}
+                      {f.status === "paid" ? "Payée" : f.status === "cancelled" ? "Annulée" : f.status === "partial" ? "Payée en partie" : late ? "En retard" : "À régler"}
                     </Badge>
                     <span className="w-32 text-right tabular"><Amount cents={f.amount_paid} /> <span className="text-muted">/ <Amount cents={f.amount_due} /></span></span>
                     {canWrite && f.status !== "paid" && f.status !== "cancelled" && (

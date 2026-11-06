@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Field, Input, Select, Textarea } from "@/components/ui/input";
 import type { Organization } from "@/lib/types";
 import type { PlanDef, PlanTier } from "@/lib/plans";
-import { cn, fmtDate } from "@/lib/utils";
+import { cn, fmtDate, initials } from "@/lib/utils";
 
 function useAct() {
   const [pending, start] = useTransition();
@@ -31,17 +31,19 @@ export function OrgForm({ orgId, org, disabled }: { orgId: string; org: Organiza
   return (
     <form action={(fd) => act(() => updateOrganization(orgId, fd), "Informations enregistrées")} className="grid gap-3">
       <fieldset disabled={disabled} className="grid gap-3">
+        <p className="text-[11.5px] font-semibold uppercase tracking-[0.08em] text-subtle">Identité</p>
         <Field label="Nom de l'association"><Input name="name" required defaultValue={org.name} /></Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="N° RNA" hint="W suivi de 9 caractères"><Input name="rna" defaultValue={org.rna ?? ""} placeholder="W751234567" className="uppercase" /></Field>
-          <Field label="SIREN" hint="Obligatoire pour le FEC"><Input name="siren" defaultValue={org.siren ?? ""} inputMode="numeric" maxLength={9} /></Field>
+          <Field label="SIREN" hint="Nécessaire pour l'export FEC"><Input name="siren" defaultValue={org.siren ?? ""} inputMode="numeric" maxLength={9} /></Field>
         </div>
+        <p className="mt-3 text-[11.5px] font-semibold uppercase tracking-[0.08em] text-subtle">Coordonnées</p>
         <Field label="Adresse du siège"><Input name="address_line" defaultValue={org.address_line ?? ""} /></Field>
         <div className="grid grid-cols-[120px_1fr] gap-3">
           <Field label="Code postal"><Input name="postal_code" defaultValue={org.postal_code ?? ""} /></Field>
           <Field label="Ville"><Input name="city" defaultValue={org.city ?? ""} /></Field>
         </div>
-        <Field label="E-mail de contact" hint="Adresse de réponse des relances de cotisation."><Input name="email" type="email" defaultValue={org.email ?? ""} /></Field>
+        <Field label="E-mail de contact" hint="Les adhérents vous répondent à cette adresse."><Input name="email" type="email" defaultValue={org.email ?? ""} /></Field>
         {!disabled && <Button type="submit" variant="primary" loading={pending} className="justify-self-start">Enregistrer</Button>}
       </fieldset>
     </form>
@@ -53,7 +55,8 @@ const ROLES = [["admin", "Administrateur"], ["treasurer", "Trésorier"], ["membe
 export function MemberRow({ orgId, userId, name, email, role, canEdit, isSelf }: { orgId: string; userId: string; name: string; email: string; role: string; canEdit: boolean; isSelf: boolean }) {
   const { pending, act } = useAct();
   return (
-    <li className="flex flex-wrap items-center gap-3 px-5 py-2.5 text-[13px]">
+    <li className="flex flex-wrap items-center gap-3 px-5 py-3 text-[13px]">
+      <span className="grid size-8 shrink-0 place-items-center rounded-full bg-surface-2 text-[11px] font-semibold text-muted">{initials(name)}</span>
       <div className="min-w-0 flex-1"><div className="font-medium">{name}{isSelf && <span className="ml-1.5 text-xs text-muted">(vous)</span>}</div><div className="text-xs text-muted">{email}</div></div>
       {canEdit ? (
         <>
