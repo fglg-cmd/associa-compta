@@ -11,10 +11,11 @@ const bob = { email: `bob+${run}@e2e.associa-compta.fr`, password: "Motdepasse-t
 let orgPath = "";
 
 async function login(page: Page, u: typeof alice) {
-  await page.goto("/connexion");
+  await page.goto("/connexion", { waitUntil: "networkidle" });
   await page.getByLabel("Adresse e-mail").fill(u.email);
   await page.getByLabel(/Mot de passe/).fill(u.password);
   await page.getByRole("button", { name: "Se connecter" }).click();
+  await page.waitForURL((u) => !u.pathname.startsWith("/connexion"));
 }
 
 test.beforeAll(async () => {
