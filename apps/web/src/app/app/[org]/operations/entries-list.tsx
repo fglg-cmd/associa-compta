@@ -49,9 +49,9 @@ export function EntriesList({ orgId, entries, accounts, canWrite, highlight }: {
         <thead className="border-b border-border text-left text-xs text-muted">
           <tr>
             <th className="w-8" />
-            <th className="py-2 font-medium">Date</th>
-            <th className="font-medium">Pièce</th>
-            <th className="font-medium">Libellé</th>
+            <th className="py-2.5 pr-4 font-medium">Date</th>
+            <th className="pr-4 font-medium">Pièce</th>
+            <th className="pr-4 font-medium">Libellé</th>
             <th className="hidden font-medium md:table-cell">Origine</th>
             <th className="pr-3 text-right font-medium">Montant</th>
             <th className="w-10" />
@@ -65,9 +65,9 @@ export function EntriesList({ orgId, entries, accounts, canWrite, highlight }: {
               <Fragment key={e.id}>
                 <tr className={cn("cursor-pointer hover:bg-surface-2/60", highlight === e.id && "bg-accent-soft/40")} onClick={() => { const s = new Set(open); if (s.has(e.id)) s.delete(e.id); else s.add(e.id); setOpen(s); }}>
                   <td className="pl-3"><ChevronRight className={cn("size-3.5 text-subtle transition-transform", isOpen && "rotate-90")} /></td>
-                  <td className="py-2.5 text-muted">{fmtDateNum(e.date)}</td>
-                  <td className="whitespace-nowrap font-mono text-xs text-muted">{e.journal}{e.entry_number ? `-${String(e.entry_number).padStart(4, "0")}` : ""}</td>
-                  <td className="max-w-0 w-full">
+                  <td className="whitespace-nowrap py-2.5 pr-4 text-muted">{fmtDateNum(e.date)}</td>
+                  <td className="whitespace-nowrap pr-4 font-mono text-xs text-muted">{e.journal}{e.entry_number ? `-${String(e.entry_number).padStart(4, "0")}` : ""}</td>
+                  <td className="max-w-0 w-full pr-4">
                     <div className="flex items-center gap-2">
                       <span className={cn("truncate", e.reversed && "text-muted line-through")}>{e.label}</span>
                       {e.status === "draft" && <Badge tone="warning">Brouillon</Badge>}

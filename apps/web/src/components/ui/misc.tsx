@@ -17,7 +17,7 @@ export function PageHeader({
     <div className="mb-6 flex flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-[22px] font-semibold tracking-[-0.02em]">{title}</h1>
+          <h1 className="text-[24px] font-semibold tracking-[-0.025em]">{title}</h1>
           {description && <p className="mt-1 text-sm text-muted">{description}</p>}
         </div>
         {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -42,11 +42,14 @@ export function EmptyState({
 }) {
   return (
     <div className={cn("flex flex-col items-center justify-center px-6 py-14 text-center", className)}>
-      <div className="mb-4 grid size-11 place-items-center rounded-xl border border-border bg-surface-2 shadow-xs">
-        <Icon className="size-5 text-muted" />
+      <div className="relative mb-5">
+        <div aria-hidden className="absolute -inset-3 rounded-2xl bg-[radial-gradient(circle,color-mix(in_oklch,var(--accent)_14%,transparent),transparent_70%)]" />
+        <div className="relative grid size-12 place-items-center rounded-xl border border-border bg-surface shadow-sm">
+          <Icon className="size-5 text-accent" />
+        </div>
       </div>
-      <h3 className="text-sm font-semibold">{title}</h3>
-      {description && <p className="mt-1 max-w-sm text-[13px] text-muted">{description}</p>}
+      <h3 className="text-[15px] font-semibold tracking-[-0.01em]">{title}</h3>
+      {description && <p className="mt-1.5 max-w-sm text-[13.5px] leading-relaxed text-muted">{description}</p>}
       {action && <div className="mt-4">{action}</div>}
     </div>
   );

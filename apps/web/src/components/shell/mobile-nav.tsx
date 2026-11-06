@@ -15,7 +15,7 @@ export function MobileNav(props: ShellProps) {
         </D.Trigger>
         <D.Portal>
           <D.Overlay className="fixed inset-0 z-40 bg-black/40 data-[state=open]:animate-fade-in" />
-          <D.Content className="fixed inset-y-0 left-0 z-50 flex w-[272px] flex-col gap-3 border-r border-border bg-background p-3 shadow-lg">
+          <D.Content className="fixed inset-y-0 left-0 z-50 flex w-[272px] flex-col gap-4 overflow-y-auto border-r border-border bg-sidebar p-3 shadow-lg">
             <D.Title className="sr-only">Navigation</D.Title>
             <D.Description className="sr-only">Menu principal</D.Description>
             <div className="flex items-center gap-1">
