@@ -6,9 +6,11 @@ import { ArrowRight, Menu, X } from "lucide-react";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { SocialLinks } from "@/components/social";
+import { useSignedIn } from "./auth-buttons";
 
 /** Menu de navigation du site public sur téléphone (le menu horizontal est masqué). */
-export function MobileMenu({ links, signedIn }: { links: readonly (readonly [string, string])[]; signedIn: boolean }) {
+export function MobileMenu({ links }: { links: readonly (readonly [string, string])[] }) {
+  const signedIn = useSignedIn();
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
   return (

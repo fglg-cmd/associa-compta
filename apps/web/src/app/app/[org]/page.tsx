@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Amount, EmptyState } from "@/components/ui/misc";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { PairedBars, TreasuryLine } from "@/components/charts/charts";
+import { PairedBars, TreasuryLine } from "@/components/charts/lazy";
 import { cn, fmtDate, fmtDateShort, fmtMonth, todayISO } from "@/lib/utils";
 
 export const metadata = { title: "Accueil" };

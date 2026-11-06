@@ -1,7 +1,6 @@
 "use client";
 import { useEffect } from "react";
 import { Toaster } from "sonner";
-import posthog from "posthog-js";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { publicEnv } from "@/lib/public-env";
 
@@ -11,14 +10,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (posthogStarted || !publicEnv.posthogKey) return;
     posthogStarted = true;
-    posthog.init(publicEnv.posthogKey, {
+    // Chargé à la demande : sans clé PostHog, rien n'est téléchargé.
+    void import("posthog-js").then(({ default: posthog }) => posthog.init(publicEnv.posthogKey, {
       api_host: publicEnv.posthogHost,
       person_profiles: "identified_only",
       capture_pageview: "history_change",
       // Aucune donnée financière dans les enregistrements de session
       session_recording: { maskAllInputs: true, maskTextSelector: ".tabular, [data-private]" },
       respect_dnt: true,
-    });
+    }));
   }, []);
 
   return (
@@ -38,5 +38,5 @@ export function Providers({ children }: { children: React.ReactNode }) {
 }
 
 export function identifyUser(id: string, email?: string | null) {
-  if (publicEnv.posthogKey) posthog.identify(id, email ? { email } : undefined);
+  if (publicEnv.posthogKey) void import("posthog-js").then(({ default: posthog }) => posthog.identify(id, email ? { email } : undefined));
 }

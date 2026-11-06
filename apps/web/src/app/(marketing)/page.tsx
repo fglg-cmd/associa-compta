@@ -25,7 +25,6 @@ import { cn } from "@/lib/utils";
 import { ProductPreview } from "./product-preview";
 import { DemoPlayer } from "./demo-player";
 
-export const dynamic = "force-dynamic";
 
 const TRUST = [
   { icon: ScrollText, label: "Conforme au règlement ANC 2018-06" },

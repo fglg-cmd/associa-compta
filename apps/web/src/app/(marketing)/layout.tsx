@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
-import { getSessionUser } from "@/lib/auth";
 import { SocialLinks, SOCIAL_LINKS } from "@/components/social";
 import { MobileMenu } from "./mobile-menu";
+import { AuthButtons } from "./auth-buttons";
 import { legal } from "@/lib/legal";
 import { publicEnv } from "@/lib/public-env";
 
@@ -14,8 +14,7 @@ const NAV = [
   ["/tarifs", "Tarifs"],
 ] as const;
 
-export default async function MarketingLayout({ children }: { children: React.ReactNode }) {
-  const user = await getSessionUser();
+export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   const organization = {
     "@context": "https://schema.org",
     "@type": "Organization",
@@ -37,15 +36,8 @@ export default async function MarketingLayout({ children }: { children: React.Re
             ))}
           </nav>
           <div className="ml-auto flex items-center gap-2">
-            {user ? (
-              <Button asChild variant="primary"><Link href="/app">Ouvrir l&apos;application</Link></Button>
-            ) : (
-              <>
-                <Button asChild variant="ghost" className="hidden sm:inline-flex"><Link href="/connexion">Connexion</Link></Button>
-                <Button asChild variant="primary"><Link href="/inscription"><span className="sm:hidden">Essayer</span><span className="hidden sm:inline">Essayer gratuitement</span></Link></Button>
-              </>
-            )}
-            <MobileMenu links={NAV} signedIn={Boolean(user)} />
+            <AuthButtons />
+            <MobileMenu links={NAV} />
           </div>
         </div>
       </header>

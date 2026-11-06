@@ -16,7 +16,8 @@ export async function getDashboard(orgId: string, fy: FiscalYear) {
   const today = todayISO();
   const from12 = monthStart(today, -11);
 
-  const [treasury, statements, flowsRes, bankAccounts, txRes, docsRes, feesRes, projectsRes, recentRes, counts] = await Promise.all([
+  // Toutes les lectures partent en même temps : un seul aller-retour vers la base.
+  const [treasury, statements, flowsRes, bankAccounts, txRes, docsRes, feesRes, projectsRes, recentRes, counts, txEntries, recon] = await Promise.all([
     getTreasury(orgId),
     getStatements(orgId, fy, today),
     supabase.rpc("monthly_flows", { p_org: orgId, p_from: from12, p_to: today }),
@@ -32,6 +33,18 @@ export async function getDashboard(orgId: string, fy: FiscalYear) {
       supabase.from("memberships").select("*", { count: "exact", head: true }).eq("organization_id", orgId),
       supabase.from("documents").select("*", { count: "exact", head: true }).eq("organization_id", orgId),
     ]),
+    fetchAll((a, b) => supabase.from("bank_transactions").select("id, entry_id").eq("organization_id", orgId).not("entry_id", "is", null).order("id").range(a, b), 50_000),
+    // Écart de rapprochement cumulé sur les comptes bancaires
+    getBankAccounts(orgId).then((accounts) =>
+      Promise.all(
+        accounts.filter((b) => !b.is_archived).map(async (b) => {
+          const { data } = await supabase.rpc("bank_reconciliation", { p_bank_account: b.id, p_at: today });
+          const r = (data as { statement_balance: number; ledger_balance: number; pending_amount: number; unmatched_ledger_amount: number }[] | null)?.[0];
+          // Écart inexpliqué = (relevé − compta) − (en attente − non rapprochés)
+          return r ? Number(r.statement_balance) - Number(r.ledger_balance) - (Number(r.pending_amount) - Number(r.unmatched_ledger_amount)) : 0;
+        }),
+      ),
+    ),
   ]);
 
   const flows: MonthlyFlow[] = ((flowsRes.data ?? []) as { month: string; income: number; expense: number }[]).map((f) => ({
@@ -48,18 +61,8 @@ export async function getDashboard(orgId: string, fy: FiscalYear) {
     if (d.entry_id) docEntries.add(d.entry_id);
   }
   const txs = (txRes.data ?? []) as { id: string; date: string; label: string; amount: number; status: TxForAnalysis["status"] }[];
-  const txEntries = await fetchAll((a, b) => supabase.from("bank_transactions").select("id, entry_id").eq("organization_id", orgId).not("entry_id", "is", null).order("id").range(a, b), 50_000);
   const entryByTx = new Map(((txEntries ?? []) as { id: string; entry_id: string }[]).map((t) => [t.id, t.entry_id]));
 
-  // Écart de rapprochement cumulé sur les comptes bancaires
-  const recon = await Promise.all(
-    bankAccounts.filter((b) => !b.is_archived).map(async (b) => {
-      const { data } = await supabase.rpc("bank_reconciliation", { p_bank_account: b.id, p_at: today });
-      const r = (data as { statement_balance: number; ledger_balance: number; pending_amount: number; unmatched_ledger_amount: number }[] | null)?.[0];
-      // Écart inexpliqué = (relevé − compta) − (en attente − non rapprochés)
-      return r ? Number(r.statement_balance) - Number(r.ledger_balance) - (Number(r.pending_amount) - Number(r.unmatched_ledger_amount)) : 0;
-    }),
-  );
 
   const anomalies = detectAnomalies(
     txs.map((t) => ({

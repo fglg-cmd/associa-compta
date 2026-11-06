@@ -15,7 +15,6 @@ const FAQ = [
   ["Que se passe-t-il si je résilie ?", "Votre abonnement reste actif jusqu'à la fin de la période payée, puis votre association repasse en offre Découverte, sans perte de données."],
 ];
 
-export const dynamic = "force-dynamic";
 
 export default function PricingPage() {
   const plans = Object.values(PLANS);

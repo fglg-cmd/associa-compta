@@ -1,8 +1,10 @@
-import * as Sentry from "@sentry/nextjs";
+// Sentry n'est chargé que s'il est configuré : sans DSN, aucune dépendance n'est
+// évaluée au démarrage des fonctions (démarrages à froid plus rapides).
+const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
 
 export async function register() {
-  const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN;
   if (!dsn) return;
+  const Sentry = await import("@sentry/nextjs");
   Sentry.init({
     dsn,
     environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV,
@@ -18,4 +20,10 @@ export async function register() {
   });
 }
 
-export const onRequestError = Sentry.captureRequestError;
+type CaptureRequestError = typeof import("@sentry/nextjs").captureRequestError;
+
+export async function onRequestError(...args: Parameters<CaptureRequestError>) {
+  if (!dsn) return;
+  const Sentry = await import("@sentry/nextjs");
+  Sentry.captureRequestError(...args);
+}
