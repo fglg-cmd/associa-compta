@@ -105,10 +105,10 @@ export function ProductPreview() {
                   </div>
                 </div>
                 <div className="mt-3 flex h-[104px] items-end gap-2.5 border-b border-border pb-px sm:gap-3.5">
-                  {MONTHS.map((x) => (
+                  {MONTHS.map((x, i) => (
                     <div key={x.m} className="flex h-full flex-1 items-end justify-center gap-[3px]">
-                      <span className="w-full max-w-3 rounded-t-[3px] bg-chart-1" style={{ height: `${x.r}%` }} />
-                      <span className="w-full max-w-3 rounded-t-[3px] bg-chart-2/85" style={{ height: `${x.d}%` }} />
+                      <span className="w-full max-w-3 origin-bottom rounded-t-[3px] bg-chart-1 animate-[demo-grow_700ms_cubic-bezier(0.16,1,0.3,1)_both]" style={{ height: `${x.r}%`, animationDelay: `${300 + i * 90}ms` }} />
+                      <span className="w-full max-w-3 origin-bottom rounded-t-[3px] bg-chart-2/85 animate-[demo-grow_700ms_cubic-bezier(0.16,1,0.3,1)_both]" style={{ height: `${x.d}%`, animationDelay: `${360 + i * 90}ms` }} />
                     </div>
                   ))}
                 </div>
@@ -118,21 +118,28 @@ export function ProductPreview() {
               </div>
 
               {/* Mouvements */}
-              <div className="rounded-lg border border-border bg-surface shadow-xs">
+              <div data-demo-anchor="" className="rounded-lg border border-border bg-surface shadow-xs">
                 <p className="px-3 pt-2.5 pb-1.5 text-[11px] font-semibold">Derniers mouvements</p>
                 <ul className="divide-y divide-border">
-                  {TX.map((t) => (
-                    <li key={t.label} className="flex items-center gap-2 px-3 py-[7px]">
+                  {TX.map((t, i) => {
+                    // Chaque mouvement est « catégorisé » à tour de rôle, comme dans l'application.
+                    const delay = 900 + i * 650;
+                    return (
+                    <li key={t.label} className="flex items-center gap-2 px-3 py-[7px] animate-[demo-flash_900ms_ease-out]" style={{ animationDelay: `${delay}ms` }}>
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-mono text-[9.5px] text-muted">{t.label}</p>
-                        <p className="mt-0.5 flex items-center gap-1 truncate text-[10.5px] font-medium">
-                          {t.ai && <Sparkles className="size-2.5 shrink-0 text-accent" />}
-                          {t.cat}
-                        </p>
+                        <div className="mt-0.5 grid">
+                          <span aria-hidden className="col-start-1 row-start-1 h-3 w-24 self-center rounded bg-[linear-gradient(90deg,var(--surface-2)_25%,var(--border)_50%,var(--surface-2)_75%)] bg-[length:200%_100%] [animation:demo-shimmer_1.1s_linear_infinite,demo-out_300ms_ease-out_both]" style={{ animationDelay: `0ms, ${delay - 200}ms` }} />
+                          <p className="col-start-1 row-start-1 flex items-center gap-1 truncate text-[10.5px] font-medium animate-[demo-in_400ms_ease-out_both]" style={{ animationDelay: `${delay}ms` }}>
+                            {t.ai && <Sparkles className="size-2.5 shrink-0 text-accent" />}
+                            {t.cat}
+                          </p>
+                        </div>
                       </div>
                       <span className={cn("shrink-0 text-[10.5px] font-semibold tabular", t.positive ? "text-positive" : "text-foreground")}>{t.amount}</span>
                     </li>
-                  ))}
+                    );
+                  })}
                 </ul>
               </div>
             </div>
@@ -141,7 +148,7 @@ export function ProductPreview() {
       </div>
 
       {/* Carte flottante : écriture générée */}
-      <div className="absolute -bottom-6 -left-3 hidden w-60 rounded-xl border border-border bg-surface p-3 shadow-lg lg:block xl:-left-10">
+      <div className="absolute -bottom-6 -left-3 hidden w-60 rounded-xl border border-border bg-surface p-3 shadow-lg animate-[demo-in_500ms_cubic-bezier(0.16,1,0.3,1)_both] [animation-delay:3.6s] lg:block xl:-left-10">
         <div className="flex items-center gap-2">
           <LogoMark className="size-4" />
           <p className="text-[11px] font-semibold">Écriture générée</p>

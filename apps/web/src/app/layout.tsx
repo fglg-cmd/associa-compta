@@ -12,7 +12,8 @@ export const metadata: Metadata = {
     "Le logiciel de gestion financière des associations : banque, justificatifs, adhérents, projets, bilan et compte de résultat conformes. Gratuit pour démarrer.",
   applicationName: "ASSOCIA COMPTA",
   openGraph: { type: "website", locale: "fr_FR", siteName: "ASSOCIA COMPTA" },
-  icons: { icon: "/icon.svg" },
+  twitter: { card: "summary_large_image" },
+  icons: { icon: "/icon.svg", apple: "/apple-icon" },
 };
 
 export const viewport: Viewport = {

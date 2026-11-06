@@ -3,6 +3,7 @@ import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { getSessionUser } from "@/lib/auth";
 import { SocialLinks, SOCIAL_LINKS } from "@/components/social";
+import { MobileMenu } from "./mobile-menu";
 import { legal } from "@/lib/legal";
 import { publicEnv } from "@/lib/public-env";
 
@@ -41,10 +42,10 @@ export default async function MarketingLayout({ children }: { children: React.Re
             ) : (
               <>
                 <Button asChild variant="ghost" className="hidden sm:inline-flex"><Link href="/connexion">Connexion</Link></Button>
-                <Button asChild variant="ghost" className="sm:hidden"><Link href="/connexion">Se connecter</Link></Button>
                 <Button asChild variant="primary"><Link href="/inscription"><span className="sm:hidden">Essayer</span><span className="hidden sm:inline">Essayer gratuitement</span></Link></Button>
               </>
             )}
+            <MobileMenu links={NAV} signedIn={Boolean(user)} />
           </div>
         </div>
       </header>

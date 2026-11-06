@@ -23,6 +23,7 @@ import { formatEUR } from "@associa/accounting";
 import { features } from "@/lib/env";
 import { cn } from "@/lib/utils";
 import { ProductPreview } from "./product-preview";
+import { DemoPlayer } from "./demo-player";
 
 export const dynamic = "force-dynamic";
 
@@ -122,7 +123,7 @@ export default function Landing() {
           </ul>
 
           <div className="mt-16 sm:mt-20">
-            <ProductPreview />
+            <DemoPlayer><ProductPreview /></DemoPlayer>
           </div>
         </div>
       </section>
