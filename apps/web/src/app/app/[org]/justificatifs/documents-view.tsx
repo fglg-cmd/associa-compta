@@ -98,7 +98,9 @@ export function DocumentsView({ orgId, docs, canWrite, folders, transactions, op
                       {d.folder} · {fmtDateShort(d.created_at)}{d.extracted_vendor ? ` · ${d.extracted_vendor}` : ""}
                     </span>
                   </span>
-                  {d.ocr_status === "processing" && <Badge><Loader2 className="size-3 animate-spin" /> Lecture</Badge>}
+                  {d.ocr_status === "processing" && (Date.now() - new Date(d.created_at).getTime() < 3 * 60_000
+                    ? <Badge><Loader2 className="size-3 animate-spin" /> Lecture</Badge>
+                    : <Badge tone="warning">Lecture interrompue</Badge>)}
                   {d.ocr_status === "failed" && <Badge tone="warning">Illisible</Badge>}
                   {(d.bank_transaction_id || d.entry_id) ? <Badge tone="positive"><Link2 className="size-3" /> {tx ? `Rattaché au ${fmtDateShort(tx.date)}` : "Rattaché"}</Badge> : <Badge tone="warning">À rattacher</Badge>}
                   <span className="w-24 text-right text-[13px] font-medium tabular">{d.extracted_amount ? formatEUR(d.extracted_amount) : ""}</span>
@@ -143,6 +145,9 @@ export function DocumentsView({ orgId, docs, canWrite, folders, transactions, op
                   {canWrite && <Button size="sm" variant="ghost" className="text-negative" onClick={() => { if (confirm("Supprimer définitivement ce document ?")) act(() => deleteDocument(orgId, selected.id), "Document supprimé", true); }}><Trash2 /> Supprimer</Button>}
                 </div>
                 {selected.ocr_status === "skipped" && <p className="text-xs text-muted">Ce document n&apos;a pas pu être lu automatiquement.</p>}
+                {(selected.ocr_status === "failed" || (selected.ocr_status === "processing" && Date.now() - new Date(selected.created_at).getTime() >= 3 * 60_000)) && canWrite && (
+                  <p className="rounded-md bg-warning-soft px-2.5 py-2 text-xs text-warning">La lecture automatique n&apos;a pas abouti. Cliquez sur « Relire » pour réessayer.</p>
+                )}
               </div>
             </div>
           </DialogContent>

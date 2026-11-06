@@ -38,8 +38,13 @@ const nextConfig: NextConfig = {
   // de pdfkit. Sans cela, l'export PDF échoue sur Vercel (« Cannot find module Helvetica »).
   outputFileTracingIncludes: {
     "/api/exports/[orgId]": ["../../node_modules/.pnpm/pdfkit@*/node_modules/pdfkit/js/standard-fonts/**/*", "../../node_modules/.pnpm/pdfkit@*/node_modules/pdfkit/js/data/**/*"],
-    // Dictionnaire français de l'OCR, embarqué pour ne pas le télécharger à chaque lecture.
-    "/api/documents/[id]/ocr": ["./ocr-data/**/*"],
+    // OCR : dictionnaire français embarqué, et cœur WebAssembly de Tesseract (chargé par
+    // chemin à l'exécution, donc invisible au traçage : sans lui, le moteur ne démarre
+    // jamais sur Vercel et la lecture reste bloquée « en cours »).
+    "/api/documents/[id]/ocr": [
+      "./ocr-data/**/*",
+      "../../node_modules/.pnpm/tesseract.js-core@*/node_modules/tesseract.js-core/*.wasm",
+    ],
   },
   experimental: {
     serverActions: { bodySizeLimit: "26mb" },

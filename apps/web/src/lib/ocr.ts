@@ -81,14 +81,32 @@ async function prepareImage(bytes: Buffer): Promise<Buffer> {
   }
 }
 
+const OCR_TIMEOUT_MS = 40_000;
+
+/** Échoue proprement au lieu de laisser la lecture « en cours » indéfiniment. */
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error("La lecture automatique a pris trop de temps. Réessayez avec « Relire ».")), ms);
+    p.then((v) => { clearTimeout(t); resolve(v); }, (e) => { clearTimeout(t); reject(e); });
+  });
+}
+
 async function tesseract(bytes: Buffer): Promise<string> {
   const input = await prepareImage(bytes);
   try {
-    const worker = await getWorker();
-    const { data } = await worker.recognize(input);
-    return data.text;
+    return await withTimeout(
+      (async () => {
+        const worker = await getWorker();
+        const { data } = await worker.recognize(input);
+        return data.text;
+      })(),
+      OCR_TIMEOUT_MS,
+    );
   } catch (e) {
-    workerPromise = null; // moteur en erreur : recréé à la prochaine lecture
+    // Moteur en erreur ou bloqué : on l'abandonne, il sera recréé à la prochaine lecture.
+    const stale = workerPromise;
+    workerPromise = null;
+    void stale?.then((w) => w.terminate()).catch(() => {});
     throw e;
   }
 }
