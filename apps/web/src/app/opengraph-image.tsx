@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { OgMark, ogFonts } from "@/lib/og";
+import { BRAND, OgMark, ogFonts } from "@/lib/og";
 import { publicEnv } from "@/lib/public-env";
 
 export const alt = "ASSOCIA COMPTA — La comptabilité de votre association, enfin simple.";
@@ -34,11 +34,11 @@ export default async function OpenGraphImage() {
         {/* Colonne texte */}
         <div style={{ display: "flex", flexDirection: "column", width: 640 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 52, height: 52, borderRadius: 14, backgroundColor: ACCENT }}>
-              <OgMark size={52} />
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 56, height: 56, borderRadius: 16, backgroundImage: BRAND.gradient, boxShadow: "0 8px 20px -8px rgba(61,150,112,0.6)" }}>
+              <OgMark size={40} />
             </div>
-            <div style={{ display: "flex", fontSize: 30, fontWeight: 600, letterSpacing: -0.6 }}>
-              Associa<span style={{ color: MUTED, fontWeight: 500, marginLeft: 8 }}>Compta</span>
+            <div style={{ display: "flex", fontSize: 32, fontWeight: 600, letterSpacing: -1 }}>
+              Associa<span style={{ color: BRAND.color, marginLeft: 9 }}>Compta</span>
             </div>
           </div>
 

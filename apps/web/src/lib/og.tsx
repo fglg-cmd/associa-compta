@@ -14,12 +14,15 @@ export async function ogFonts() {
   ];
 }
 
+/** Vert du logo et son dégradé. */
+export const BRAND = { color: "#3d9670", gradient: "linear-gradient(150deg, #5bbb8e, #3a8a66)" };
+
 /** Monogramme « A » de la marque, en SVG (fond géré par l'appelant). */
 export function OgMark({ size }: { size: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32">
-      <path d="M9 22.5 15.2 8.8a.9.9 0 0 1 1.6 0L23 22.5" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      <path d="M12 17.5h8" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" />
+      <path d="M9 23.5 15.2 8.8a.9.9 0 0 1 1.6 0L23 23.5" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <path d="M11.8 18h8.4" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
     </svg>
   );
 }
