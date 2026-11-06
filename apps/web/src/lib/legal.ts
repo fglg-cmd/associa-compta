@@ -6,6 +6,6 @@ export const legal = {
   siren: process.env.NEXT_PUBLIC_LEGAL_SIREN ?? "",
   address: process.env.NEXT_PUBLIC_LEGAL_ADDRESS ?? "",
   director: process.env.NEXT_PUBLIC_LEGAL_DIRECTOR ?? "",
-  email: process.env.NEXT_PUBLIC_LEGAL_EMAIL ?? "contact@associa-compta.fr",
+  email: process.env.NEXT_PUBLIC_LEGAL_EMAIL || "associacompta@gmail.com",
   host: "Vercel Inc., 440 N Barranca Ave #4133, Covina, CA 91723, États-Unis (application) ; Supabase Inc. — données hébergées dans l'Union européenne (région AWS eu-west-1, Irlande)",
 };

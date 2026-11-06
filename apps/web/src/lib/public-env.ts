@@ -12,7 +12,7 @@ export const publicEnv = {
   authProviders: (process.env.NEXT_PUBLIC_AUTH_PROVIDERS ?? "").split(",").map((s) => s.trim()).filter(Boolean),
   /** "on" si un service d'e-mail (SMTP personnalisé) est branché sur Supabase Auth : lien magique et mot de passe oublié. */
   authEmails: process.env.NEXT_PUBLIC_AUTH_EMAILS === "on",
-  supportEmail: process.env.NEXT_PUBLIC_LEGAL_EMAIL || "fglg35370@gmail.com",
+  supportEmail: process.env.NEXT_PUBLIC_LEGAL_EMAIL || "associacompta@gmail.com",
   posthogKey: process.env.NEXT_PUBLIC_POSTHOG_KEY ?? "",
   posthogHost: process.env.NEXT_PUBLIC_POSTHOG_HOST ?? "https://eu.i.posthog.com",
   sentryDsn: process.env.NEXT_PUBLIC_SENTRY_DSN ?? "",
