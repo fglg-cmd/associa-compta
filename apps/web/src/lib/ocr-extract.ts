@@ -139,6 +139,22 @@ export function extractVendor(text: string, exclude: string[] = []): string | nu
   return v ? v.replace(/[|*_]+/g, "").trim().slice(0, 80) : null;
 }
 
+const fold = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+/**
+ * Sens de l'opération : une facture émise par l'association (son nom en tête du document,
+ * avant le bloc « client ») est une recette ; tout autre justificatif est une dépense.
+ */
+export function detectDirection(text: string, ownNames: string[]): "in" | "out" {
+  const own = ownNames.map((n) => fold(n).trim()).filter((n) => n.length >= 3);
+  if (!own.length) return "out";
+  const lines = fold(text).split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  const ownIdx = lines.findIndex((l) => own.some((o) => l.includes(o)));
+  if (ownIdx < 0 || ownIdx > 1) return "out";
+  const clientIdx = lines.findIndex((l) => /\b(client|factur[ée]e? a|destinataire|adresse de facturation|a l'attention|livre a|bill to)\b/.test(l));
+  return clientIdx < 0 || ownIdx < clientIdx ? "in" : "out";
+}
+
 export function extractFields(text: string, opts: { exclude?: string[] } = {}) {
   return { amount: extractAmount(text), date: extractDate(text), vendor: extractVendor(text, opts.exclude), reference: extractReference(text) };
 }

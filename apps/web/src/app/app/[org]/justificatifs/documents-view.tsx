@@ -1,10 +1,10 @@
 "use client";
 import { useEffect, useState, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Download, FileImage, FileSpreadsheet, FileText, FolderOpen, Link2, Loader2, ReceiptText, RefreshCw, Trash2 } from "lucide-react";
+import { Download, FileImage, FileSpreadsheet, FileText, FolderOpen, Link2, Loader2, ReceiptText, RefreshCw, Trash2, Undo2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatEUR } from "@associa/accounting";
-import { deleteDocument, getDocumentUrl, updateDocument } from "@/modules/documents/actions";
+import { deleteDocument, getDocumentUrl, undoDocumentOperation, updateDocument } from "@/modules/documents/actions";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -136,7 +136,17 @@ export function DocumentsView({ orgId, docs, canWrite, folders, transactions, op
                 {canWrite && !selected.entry_id && !selected.bank_transaction_id && (
                   <Button variant="primary" onClick={() => setCreating(true)}><ReceiptText /> Créer la dépense ou la recette</Button>
                 )}
-                {selected.entry_id && <p className="rounded-lg bg-positive-soft px-3 py-2 text-[12.5px] text-positive">Ce justificatif est rattaché à une opération enregistrée.</p>}
+                {selected.entry_id && (
+                  <div className="grid gap-2 rounded-lg bg-positive-soft px-3 py-2.5 text-[12.5px] text-positive">
+                    <p>Opération enregistrée à partir de ce justificatif.</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      <Button size="sm" variant="ghost" asChild><a href={`${pathname.replace(/\/justificatifs$/, "/operations")}?ecriture=${selected.entry_id}`}>Voir l&apos;opération</a></Button>
+                      {canWrite && !selected.bank_transaction_id && (
+                        <Button size="sm" variant="ghost" loading={pending} onClick={() => { if (confirm("Annuler cette opération ? Elle sera contre-passée et vous pourrez la saisir à nouveau.")) act(() => undoDocumentOperation(orgId, selected.id), "Opération annulée", true); }}><Undo2 /> Annuler l&apos;opération</Button>
+                      )}
+                    </div>
+                  </div>
+                )}
                 <dl className="grid gap-2 rounded-lg border border-border p-3">
                   <div className="flex justify-between"><dt className="text-muted">Montant lu</dt><dd className="font-semibold tabular">{selected.extracted_amount ? formatEUR(selected.extracted_amount) : "—"}</dd></div>
                   <div className="flex justify-between"><dt className="text-muted">Date</dt><dd>{selected.extracted_date ? fmtDate(selected.extracted_date) : "—"}</dd></div>

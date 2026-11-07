@@ -172,20 +172,83 @@ export async function importBankFile(orgId: string, bankAccountId: string, form:
     });
 
     let inserted = 0;
+    const fresh: { id: string; date: string; amount: number }[] = [];
     for (let i = 0; i < rows.length; i += 500) {
       const chunk = rows.slice(i, i + 500);
       const { data, error } = await supabase
         .from("bank_transactions")
         .upsert(chunk, { onConflict: "bank_account_id,fingerprint", ignoreDuplicates: true })
-        .select("id");
+        .select("id, date, amount");
       if (error) throw error;
       inserted += data?.length ?? 0;
+      fresh.push(...((data ?? []) as { id: string; date: string; amount: number }[]));
     }
+    const matched = await autoMatchExistingEntries(supabase, orgId, bankAccountId, fresh);
     unwrap(await supabase.from("bank_imports").update({ imported_count: inserted, duplicate_count: rows.length - inserted }).eq("id", imp.id));
     await track("bank_import", orgId, { format: parsed.format, rows: rows.length, inserted });
     revalidatePath(`/app/${org.slug}`, "layout");
-    return { inserted, duplicates: rows.length - inserted, skipped: parsed.skipped.length };
+    return { inserted, duplicates: rows.length - inserted, skipped: parsed.skipped.length, matched };
   });
+}
+
+/**
+ * Rapprochement automatique à l'import : un mouvement dont le montant correspond exactement à
+ * une opération déjà saisie sur ce compte (par exemple créée depuis une facture), datée de
+ * 60 jours avant à 10 jours après, et sans autre candidat, lui est rattaché au lieu de créer
+ * une seconde écriture. Évite de compter deux fois la même dépense.
+ */
+async function autoMatchExistingEntries(
+  supabase: Awaited<ReturnType<typeof requireOrgWriter>>["supabase"],
+  orgId: string,
+  bankAccountId: string,
+  txs: { id: string; date: string; amount: number }[],
+): Promise<number> {
+  if (!txs.length) return 0;
+  const { data: ba } = await supabase.from("bank_accounts").select("account_id").eq("id", bankAccountId).single<{ account_id: string }>();
+  if (!ba) return 0;
+  const dates = txs.map((t) => t.date).sort();
+  const from = addDays(dates[0]!, -60);
+  const to = addDays(dates[dates.length - 1]!, 10);
+  const { data: lines } = await supabase
+    .from("v_ledger_lines")
+    .select("entry_id, date, debit, credit, source")
+    .eq("organization_id", orgId)
+    .eq("account_id", ba.account_id)
+    .eq("status", "posted")
+    .in("source", ["manual", "import"])
+    .gte("date", from)
+    .lte("date", to)
+    .limit(5000);
+  if (!lines?.length) return 0;
+  const net = new Map<string, { date: string; amount: number }>();
+  for (const l of lines as { entry_id: string; date: string; debit: number; credit: number }[]) {
+    const cur = net.get(l.entry_id) ?? { date: l.date, amount: 0 };
+    cur.amount += l.debit - l.credit;
+    net.set(l.entry_id, cur);
+  }
+  const ids = [...net.keys()];
+  const [{ data: used }, { data: reversed }] = await Promise.all([
+    supabase.from("bank_transactions").select("entry_id").in("entry_id", ids),
+    supabase.from("journal_entries").select("reversal_of").eq("organization_id", orgId).in("reversal_of", ids),
+  ]);
+  const taken = new Set([...(used ?? []).map((u) => u.entry_id as string), ...(reversed ?? []).map((r) => r.reversal_of as string)]);
+  let matched = 0;
+  for (const tx of txs) {
+    const lo = addDays(tx.date, -60);
+    const hi = addDays(tx.date, 10);
+    const candidates = ids.filter((id) => !taken.has(id) && net.get(id)!.amount === tx.amount && net.get(id)!.date >= lo && net.get(id)!.date <= hi);
+    if (candidates.length !== 1) continue;
+    const { error } = await supabase.rpc("match_bank_transaction", { p_tx: tx.id, p_entry: candidates[0]! });
+    if (!error) {
+      taken.add(candidates[0]!);
+      matched++;
+    }
+  }
+  return matched;
+}
+
+function addDays(iso: string, days: number): string {
+  return new Date(Date.parse(`${iso}T00:00:00Z`) + days * 864e5).toISOString().slice(0, 10);
 }
 
 const bookSchema = z.object({

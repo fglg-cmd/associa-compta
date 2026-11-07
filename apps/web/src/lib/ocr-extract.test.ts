@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractAmount, extractDate, extractFields, extractReference, extractVendor } from "./ocr-extract";
+import { detectDirection, extractAmount, extractDate, extractFields, extractReference, extractVendor } from "./ocr-extract";
 
 const invoice = `LEROY MERLIN FRANCE SAS
 Rue Chanzy 59260 Lezennes
@@ -70,5 +70,15 @@ N° de compte 0123 4567 8901 2345`;
     expect(f.amount).toBe(294000);
     expect(f.vendor).toBe("Célia Naudin");
     expect(f.reference).toBe("12345");
+  });
+
+  it("facture reçue = dépense, facture émise par l'association = recette", () => {
+    const recue = "#12345\nCélia Naudin\n123 rue\nEntreprise Concordia\nTOTAL 2940€";
+    expect(detectDirection(recue, ["Entreprise Concordia"])).toBe("out");
+    const emise = "Club de Tennis TTS\n12 rue du stade\nFacture n° 2026-004\nClient : Mairie de Rennes\nTotal 500,00 €";
+    expect(detectDirection(emise, ["Club de tennis TTS"])).toBe("in");
+    const clientEnTete = "Client : Club de Tennis TTS\nLEROY MERLIN\nTotal 50,00 €";
+    expect(detectDirection(clientEnTete, ["Club de tennis TTS"])).toBe("out");
+    expect(detectDirection("LEROY MERLIN\nTotal 50,00 €", ["TTS"])).toBe("out");
   });
 });

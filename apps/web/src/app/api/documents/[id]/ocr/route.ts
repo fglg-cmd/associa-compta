@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { runOcr } from "@/lib/ocr";
-import { autoMatchDocument } from "@/modules/documents/actions";
+import { autoCreateOperation, autoMatchDocument, type AutoOperation } from "@/modules/documents/actions";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -10,7 +10,7 @@ export const maxDuration = 60;
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
-  const { data: doc } = await supabase.from("documents").select("id, organization_id, storage_path, mime_type").eq("id", id).maybeSingle();
+  const { data: doc } = await supabase.from("documents").select("id, organization_id, storage_path, mime_type, entry_id, bank_transaction_id").eq("id", id).maybeSingle();
   if (!doc) return NextResponse.json({ error: "Document introuvable" }, { status: 404 });
   const { data: canWrite } = await supabase.rpc("can_write_finance", { org: doc.organization_id });
   if (!canWrite) return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
@@ -34,6 +34,11 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       extracted_vendor: result.fields.vendor,
     })
     .eq("id", id);
-  const matchedTx = result.status === "done" ? await autoMatchDocument(doc.organization_id as string, id) : null;
-  return NextResponse.json({ status: result.status, engine: result.engine, fields: result.fields, matchedTx, message: result.message });
+  const orgId = doc.organization_id as string;
+  // Justificatif déjà rattaché (envoyé depuis un mouvement bancaire, ou relu) : rien à créer.
+  const linked = Boolean(doc.entry_id || doc.bank_transaction_id);
+  const matchedTx = result.status === "done" && !linked ? await autoMatchDocument(orgId, id) : null;
+  // Pas de mouvement bancaire correspondant : la dépense (ou recette) est créée directement.
+  const operation: AutoOperation | null = result.status === "done" && !linked && !matchedTx ? await autoCreateOperation(orgId, id) : null;
+  return NextResponse.json({ status: result.status, engine: result.engine, fields: result.fields, matchedTx, operation, linked, message: result.message });
 }

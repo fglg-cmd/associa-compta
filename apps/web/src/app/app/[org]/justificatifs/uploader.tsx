@@ -1,11 +1,11 @@
 "use client";
 import { useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { CheckCircle2, FileUp, Loader2, ReceiptText, Upload, XCircle } from "lucide-react";
+import { CheckCircle2, FileUp, Loader2, ReceiptText, Undo2, Upload, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { formatEUR } from "@associa/accounting";
 import { getBrowserClient } from "@/lib/supabase/browser";
-import { prepareUpload, registerDocument } from "@/modules/documents/actions";
+import { prepareUpload, registerDocument, undoDocumentOperation, type AutoOperation } from "@/modules/documents/actions";
 import { ALLOWED_MIME } from "@/modules/documents/constants";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
@@ -13,7 +13,7 @@ import { Field, Select } from "@/components/ui/input";
 import { cn, formatBytes } from "@/lib/utils";
 import { compressImage } from "@/lib/image-compress";
 
-type Item = { file: File; state: "queued" | "uploading" | "reading" | "done" | "error"; message?: string; docId?: string; canCreate?: boolean };
+type Item = { file: File; state: "queued" | "uploading" | "reading" | "done" | "error"; message?: string; docId?: string; canCreate?: boolean; created?: boolean };
 
 export function Uploader({ orgId, folders, defaultFolder, txId, defaultOpen }: { orgId: string; folders: string[]; defaultFolder: string; txId?: string; defaultOpen?: boolean }) {
   const router = useRouter();
@@ -43,9 +43,17 @@ export function Uploader({ orgId, folders, defaultFolder, txId, defaultOpen }: {
     update(i, { state: "reading", docId: prep.data.id });
     try {
       const res = await fetch(`/api/documents/${prep.data.id}/ocr`, { method: "POST" });
-      const json = (await res.json()) as { status: string; fields?: { amount: number | null; vendor: string | null }; matchedTx?: string | null; message?: string };
-      const bits = [json.fields?.vendor, json.fields?.amount ? formatEUR(json.fields.amount) : null, json.matchedTx ? "rattaché au mouvement bancaire" : null].filter(Boolean);
-      update(i, { state: "done", message: json.status === "done" ? bits.join(" · ") || "Texte indexé" : json.message, canCreate: !json.matchedTx });
+      const json = (await res.json()) as { status: string; fields?: { amount: number | null; vendor: string | null }; matchedTx?: string | null; operation?: AutoOperation | null; linked?: boolean; message?: string };
+      const op = json.operation;
+      if (op?.created) {
+        update(i, { state: "done", created: true, message: `${op.direction === "in" ? "Recette" : "Dépense"} enregistrée · ${formatEUR(op.amount)} · ${op.category}` });
+      } else if (json.linked) {
+        update(i, { state: "done", message: "Justificatif rattaché au mouvement bancaire" });
+      } else if (json.matchedTx) {
+        update(i, { state: "done", message: [json.fields?.vendor, json.fields?.amount ? formatEUR(json.fields.amount) : null, "rattaché au mouvement bancaire"].filter(Boolean).join(" · ") });
+      } else {
+        update(i, { state: "done", canCreate: true, message: json.status === "done" ? op?.reason ?? "Document lu" : json.message });
+      }
     } catch {
       update(i, { state: "done", message: "Enregistré (lecture automatique indisponible)", canCreate: true });
     }
@@ -68,7 +76,7 @@ export function Uploader({ orgId, folders, defaultFolder, txId, defaultOpen }: {
   return (
     <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setItems([]); }}>
       <DialogTrigger asChild><Button variant="primary"><Upload /> Ajouter</Button></DialogTrigger>
-      <DialogContent title="Ajouter des documents" description="PDF, photos, Word ou Excel — 25 Mo par fichier. Le montant, la date et le fournisseur sont lus automatiquement.">
+      <DialogContent title="Ajouter des documents" description="Déposez vos factures et tickets (PDF ou photo) : chacun est lu et devient automatiquement une dépense, ou une recette si l'association l'a émis.">
         <div className="grid gap-4">
           <Field label="Dossier">
             <Select value={folder} onChange={(e) => setFolder(e.target.value)}>
@@ -95,13 +103,23 @@ export function Uploader({ orgId, folders, defaultFolder, txId, defaultOpen }: {
                   {it.state === "done" ? <CheckCircle2 className="size-4 text-positive" /> : it.state === "error" ? <XCircle className="size-4 text-negative" /> : it.state === "queued" ? <FileUp className="size-4 text-subtle" /> : <Loader2 className="size-4 animate-spin text-accent" />}
                   <span className="min-w-0 flex-1">
                     <span className="block truncate">{it.file.name}</span>
-                    <span className={cn("block truncate text-xs", it.state === "error" ? "text-negative" : "text-muted")}>
+                    <span className={cn("block truncate text-xs", it.state === "error" ? "text-negative" : it.created ? "font-medium text-positive" : "text-muted")}>
                       {it.message ?? (it.state === "uploading" ? "Envoi…" : it.state === "reading" ? "Lecture du montant, de la date et du fournisseur…" : formatBytes(it.file.size))}
                     </span>
                   </span>
+                  {it.state === "done" && it.created && it.docId && (
+                    <Button size="sm" variant="ghost" onClick={async () => {
+                      const r = await undoDocumentOperation(orgId, it.docId!);
+                      if (!r.ok) { toast.error(r.error); return; }
+                      update(i, { created: false, canCreate: true, message: "Opération annulée : saisissez-la vous-même" });
+                      router.refresh();
+                    }}>
+                      <Undo2 /> Annuler
+                    </Button>
+                  )}
                   {it.state === "done" && it.canCreate && it.docId && (
                     <Button size="sm" variant="primary" disabled={busy} onClick={() => { setOpen(false); setItems([]); router.push(`${pathname}?doc=${it.docId}&creer=1`); }}>
-                      <ReceiptText /> Créer la dépense
+                      <ReceiptText /> Compléter
                     </Button>
                   )}
                 </li>

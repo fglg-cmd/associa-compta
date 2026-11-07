@@ -6,7 +6,8 @@ import { run, unwrap } from "@/lib/action";
 import { planOf } from "@/lib/plans";
 import { addDaysISO, todayISO } from "@/lib/utils";
 import { categorize } from "@associa/bank-import";
-import { extractReference } from "@/lib/ocr-extract";
+import { detectDirection, extractReference } from "@/lib/ocr-extract";
+import { CATEGORIES } from "@associa/accounting";
 import { getAccounts, getBankAccounts, resolveFiscalYear } from "@/modules/accounting/queries";
 import type { CategorizationRule } from "@/lib/types";
 import { ALLOWED_MIME, MAX_DOCUMENT_BYTES } from "./constants";
@@ -160,82 +161,172 @@ export interface OperationFormData {
   maxDate: string;
 }
 
+type Supa = Awaited<ReturnType<typeof requireOrgWriter>>["supabase"];
+type DocForDraft = { name: string; extracted_amount: number | null; extracted_date: string | null; extracted_vendor: string | null; ocr_text: string | null; entry_id: string | null; bank_transaction_id: string | null };
+
+/** Lignes de total, TVA, paiement : écartées pour proposer la catégorie (« TOTAL » = station-service). */
+const NOT_DETAIL = /\b(sous[\s-]?)?total|montant|t\.?v\.?a\b|\bh\.?t\b|t\.?t\.?c|net [àa] payer|paiement|r[èe]glement|iban|bic|siret|siren|[ée]ch[ée]ance/i;
+
 /**
- * Prépare la saisie d'une dépense (ou recette) à partir d'un justificatif lu :
- * montant, date, libellé, référence et catégorie proposée (règles apprises, puis mots-clés).
+ * Prépare l'opération correspondant à un justificatif lu : sens (dépense ou recette), montant,
+ * date, libellé, référence, catégorie (règles apprises puis mots-clés) et compte de paiement.
  */
+async function buildOperation(supabase: Supa, orgId: string, orgName: string, docId: string): Promise<OperationFormData> {
+  const { data: doc } = await supabase
+    .from("documents")
+    .select("name, extracted_amount, extracted_date, extracted_vendor, ocr_text, entry_id, bank_transaction_id")
+    .eq("id", docId)
+    .eq("organization_id", orgId)
+    .maybeSingle<DocForDraft>();
+  if (!doc) throw new Error("Document introuvable.");
+  if (doc.entry_id || doc.bank_transaction_id) throw new Error("Ce justificatif est déjà rattaché à une opération.");
+
+  const [fy, accounts, banks, { data: projects }, { data: rules }] = await Promise.all([
+    resolveFiscalYear(orgId),
+    getAccounts(orgId),
+    getBankAccounts(orgId),
+    supabase.from("projects").select("id, name").eq("organization_id", orgId).neq("status", "closed").order("name"),
+    supabase.from("categorization_rules").select("*").eq("organization_id", orgId).eq("is_active", true),
+  ]);
+  if (!fy || fy.status !== "open") throw new Error("Aucun exercice ouvert : ouvrez l'exercice en cours dans Comptabilité.");
+
+  const text = doc.ocr_text ?? "";
+  const direction = detectDirection(text, [orgName]);
+  const amount = doc.extracted_amount && doc.extracted_amount > 0 ? doc.extracted_amount : null;
+  const detail = text.slice(0, 4000).split(/\r?\n/).filter((l) => !NOT_DETAIL.test(l)).join("\n");
+  const ruleList = ((rules ?? []) as CategorizationRule[]).map((r) => ({
+    id: r.id,
+    matchType: r.match_type,
+    pattern: r.pattern,
+    direction: r.direction,
+    minAmount: r.min_amount,
+    maxAmount: r.max_amount,
+    accountId: r.account_id,
+    projectId: r.project_id,
+    priority: r.priority,
+    isActive: r.is_active,
+  }));
+  const sign = direction === "in" ? 1 : -1;
+  // Les frais bancaires et intérêts n'apparaissent pas sur une facture (« frais de port »…).
+  const suggestion = categorize({ label: `${doc.extracted_vendor ?? ""}\n${detail}`, amount: sign * (amount ?? 1) }, ruleList, { excludeCategories: ["bank_fees", "interest"] });
+  const active = accounts.filter((a) => a.is_active);
+  const byNumber = new Map(active.map((a) => [a.number, a.id]));
+  const cls = direction === "in" ? "7" : "6";
+  const guessed = suggestion?.accountId ?? (suggestion?.accountNumber ? byNumber.get(suggestion.accountNumber) : undefined);
+  const categoryAccountId = guessed && active.some((a) => a.id === guessed && a.number.startsWith(cls)) ? guessed : "";
+
+  const inYear = (d: string | null) => Boolean(d && d >= fy.start_date && d <= fy.end_date);
+  const today = todayISO();
+  const fallbackDate = today < fy.start_date ? fy.start_date : today > fy.end_date ? fy.end_date : today;
+  const vendor = doc.extracted_vendor?.trim();
+  const reference = (text ? extractReference(text) : null)?.slice(0, 80) ?? "";
+  const baseName = doc.name.replace(/\.[a-z0-9]{2,5}$/i, "");
+  const label =
+    direction === "out"
+      ? vendor ? `Facture ${vendor}` : baseName
+      : reference ? `Facture n° ${reference}` : baseName;
+
+  return {
+    draft: {
+      direction,
+      label: label.slice(0, 250),
+      amount,
+      date: inYear(doc.extracted_date) ? doc.extracted_date! : fallbackDate,
+      dateFromDocument: inYear(doc.extracted_date),
+      reference,
+      categoryAccountId,
+      categoryGuessed: Boolean(categoryAccountId),
+    },
+    accounts: accounts.map((a) => ({ id: a.id, number: a.number, label: a.label, is_active: a.is_active })),
+    treasury: [
+      ...banks.filter((b) => !b.is_archived).map((b) => ({ id: b.account_id, label: b.name })),
+      ...accounts.filter((a) => a.number === "530").map((a) => ({ id: a.id, label: "Caisse (espèces)" })),
+    ],
+    projects: (projects ?? []) as { id: string; name: string }[],
+    minDate: fy.start_date,
+    maxDate: fy.end_date,
+  };
+}
+
+/** Formulaire pré-rempli (quand l'opération n'a pas pu être créée automatiquement). */
 export async function getOperationDraft(orgId: string, docId: string) {
   return run(async (): Promise<OperationFormData> => {
-    const { supabase } = await requireOrgWriter(orgId);
-    const { data: doc } = await supabase
-      .from("documents")
-      .select("name, extracted_amount, extracted_date, extracted_vendor, ocr_text, entry_id, bank_transaction_id")
-      .eq("id", docId)
-      .eq("organization_id", orgId)
-      .maybeSingle<{ name: string; extracted_amount: number | null; extracted_date: string | null; extracted_vendor: string | null; ocr_text: string | null; entry_id: string | null; bank_transaction_id: string | null }>();
-    if (!doc) throw new Error("Document introuvable.");
-    if (doc.entry_id || doc.bank_transaction_id) throw new Error("Ce justificatif est déjà rattaché à une opération.");
+    const { supabase, org } = await requireOrgWriter(orgId);
+    return buildOperation(supabase, orgId, org.name, docId);
+  });
+}
 
-    const [fy, accounts, banks, { data: projects }, { data: rules }] = await Promise.all([
-      resolveFiscalYear(orgId),
-      getAccounts(orgId),
-      getBankAccounts(orgId),
-      supabase.from("projects").select("id, name").eq("organization_id", orgId).neq("status", "closed").order("name"),
-      supabase.from("categorization_rules").select("*").eq("organization_id", orgId).eq("is_active", true),
-    ]);
-    if (!fy || fy.status !== "open") throw new Error("Aucun exercice ouvert : ouvrez l'exercice en cours dans Comptabilité.");
+export type AutoOperation =
+  | { created: true; entryId: string; direction: "in" | "out"; amount: number; category: string }
+  | { created: false; reason: string };
 
-    const amount = doc.extracted_amount && doc.extracted_amount > 0 ? doc.extracted_amount : null;
-    // Catégorie : fournisseur et lignes de détail seulement. Les lignes de total, de TVA ou de
-    // paiement sont écartées (« TOTAL » désignerait sinon la station-service du même nom).
-    const detail = (doc.ocr_text ?? "")
-      .slice(0, 4000)
-      .split(/\r?\n/)
-      .filter((l) => !/\b(sous[\s-]?)?total|montant|t\.?v\.?a\b|\bh\.?t\b|t\.?t\.?c|net [àa] payer|paiement|r[èe]glement|iban|bic|siret|siren|[ée]ch[ée]ance/i.test(l))
-      .join("\n");
-    const text = `${doc.extracted_vendor ?? ""}\n${detail}`;
-    const ruleList = ((rules ?? []) as CategorizationRule[]).map((r) => ({
-      id: r.id,
-      matchType: r.match_type,
-      pattern: r.pattern,
-      direction: r.direction,
-      minAmount: r.min_amount,
-      maxAmount: r.max_amount,
-      accountId: r.account_id,
-      projectId: r.project_id,
-      priority: r.priority,
-      isActive: r.is_active,
-    }));
-    // Les frais bancaires et intérêts n'apparaissent pas sur une facture (« frais de port »…).
-    const suggestion = categorize({ label: text, amount: -(amount ?? 1) }, ruleList, { excludeCategories: ["bank_fees", "interest"] });
-    const byNumber = new Map(accounts.filter((a) => a.is_active).map((a) => [a.number, a.id]));
-    const guessed = suggestion?.accountId ?? (suggestion?.accountNumber ? byNumber.get(suggestion.accountNumber) : undefined);
-    const categoryAccountId = guessed && accounts.some((a) => a.id === guessed && a.number.startsWith("6")) ? guessed : "";
+/**
+ * Création automatique de l'opération dès la lecture du justificatif : une facture reçue
+ * devient une dépense, une facture émise par l'association une recette. Payée depuis le
+ * premier compte bancaire (ou la caisse). Annulable en un clic (contre-passation).
+ * Rien n'est créé si le montant n'a pas été lu : le trésorier complète alors le formulaire.
+ */
+export async function autoCreateOperation(orgId: string, docId: string): Promise<AutoOperation> {
+  const { supabase, org } = await requireOrgWriter(orgId);
+  let ctx: OperationFormData;
+  try {
+    ctx = await buildOperation(supabase, orgId, org.name, docId);
+  } catch (e) {
+    return { created: false, reason: (e as Error).message };
+  }
+  const { draft } = ctx;
+  if (!draft.amount) return { created: false, reason: "Montant non lu : complétez l'opération." };
+  const payment = ctx.treasury[0];
+  if (!payment) return { created: false, reason: "Aucun compte bancaire ni caisse." };
 
-    const inYear = (d: string | null) => Boolean(d && d >= fy.start_date && d <= fy.end_date);
-    const today = todayISO();
-    const fallbackDate = today < fy.start_date ? fy.start_date : today > fy.end_date ? fy.end_date : today;
-    const vendor = doc.extracted_vendor?.trim();
+  const fallback = ctx.accounts.find((a) => a.is_active && a.number === (draft.direction === "in" ? "758" : "658"));
+  const categoryId = draft.categoryAccountId || fallback?.id;
+  if (!categoryId) return { created: false, reason: "Catégorie introuvable : complétez l'opération." };
+  const category = ctx.accounts.find((a) => a.id === categoryId)!;
 
-    return {
-      draft: {
-        direction: "out",
-        label: vendor ? `Facture ${vendor}`.slice(0, 250) : doc.name.replace(/\.[a-z0-9]{2,5}$/i, "").slice(0, 250),
-        amount,
-        date: inYear(doc.extracted_date) ? doc.extracted_date! : fallbackDate,
-        dateFromDocument: inYear(doc.extracted_date),
-        reference: (doc.ocr_text ? extractReference(doc.ocr_text) : null)?.slice(0, 80) ?? "",
-        categoryAccountId,
-        categoryGuessed: Boolean(categoryAccountId),
-      },
-      accounts: accounts.map((a) => ({ id: a.id, number: a.number, label: a.label, is_active: a.is_active })),
-      treasury: [
-        ...banks.filter((b) => !b.is_archived).map((b) => ({ id: b.account_id, label: b.name })),
-        ...accounts.filter((a) => a.number === "530").map((a) => ({ id: a.id, label: "Caisse (espèces)" })),
-      ],
-      projects: (projects ?? []) as { id: string; name: string }[],
-      minDate: fy.start_date,
-      maxDate: fy.end_date,
-    };
+  const { data: bank } = await supabase.from("bank_accounts").select("journal_id").eq("organization_id", orgId).eq("account_id", payment.id).maybeSingle<{ journal_id: string }>();
+  let journalId = bank?.journal_id;
+  if (!journalId) {
+    const { data: j } = await supabase.from("journals").select("id").eq("organization_id", orgId).eq("code", "CA").maybeSingle<{ id: string }>();
+    journalId = j?.id;
+  }
+  if (!journalId) return { created: false, reason: "Journal introuvable." };
+
+  const lines =
+    draft.direction === "in"
+      ? [{ account_id: payment.id, debit: draft.amount, credit: 0 }, { account_id: categoryId, debit: 0, credit: draft.amount }]
+      : [{ account_id: categoryId, debit: draft.amount, credit: 0 }, { account_id: payment.id, debit: 0, credit: draft.amount }];
+  const { data: entryId, error } = await supabase.rpc("create_journal_entry", {
+    p_org: orgId,
+    p_journal: journalId,
+    p_date: draft.date,
+    p_label: draft.label,
+    p_lines: lines,
+    p_reference: draft.reference || null,
+    p_post: true,
+    p_source: "manual",
+    p_project: null,
+  });
+  if (error || !entryId) return { created: false, reason: error?.message ?? "Création impossible." };
+  await supabase.from("documents").update({ entry_id: entryId as string }).eq("id", docId).eq("organization_id", orgId);
+  revalidatePath(`/app/${org.slug}`, "layout");
+  const catLabel = CATEGORIES.find((c) => c.account === category.number)?.label ?? category.label;
+  return { created: true, entryId: entryId as string, direction: draft.direction, amount: draft.amount, category: catLabel };
+}
+
+/**
+ * Annule l'opération créée depuis un justificatif (contre-passation : la comptabilité garde
+ * la trace) et libère le justificatif pour une nouvelle saisie.
+ */
+export async function undoDocumentOperation(orgId: string, docId: string) {
+  return run(async () => {
+    const { supabase, org } = await requireOrgWriter(orgId);
+    const { data: doc } = await supabase.from("documents").select("entry_id").eq("id", docId).eq("organization_id", orgId).maybeSingle<{ entry_id: string | null }>();
+    if (!doc?.entry_id) throw new Error("Aucune opération à annuler.");
+    const { data: tx } = await supabase.from("bank_transactions").select("id").eq("entry_id", doc.entry_id).maybeSingle();
+    if (tx) throw new Error("Cette opération est rapprochée d'un mouvement bancaire : annulez-la depuis la page Banque.");
+    unwrap(await supabase.rpc("reverse_journal_entry", { p_entry: doc.entry_id, p_date: null }));
+    unwrap(await supabase.from("documents").update({ entry_id: null }).eq("id", docId).eq("organization_id", orgId));
+    revalidatePath(`/app/${org.slug}`, "layout");
   });
 }

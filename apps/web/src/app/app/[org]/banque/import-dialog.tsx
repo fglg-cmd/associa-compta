@@ -72,7 +72,10 @@ export function ImportDialog({
       const r = await importBankFile(orgId, accountId, form(preview?.format === "csv" ? mapping : null));
       if (!r.ok) return setError(r.error);
       toast.success(`${r.data.inserted} mouvement(s) importé(s)`, {
-        description: r.data.duplicates ? `${r.data.duplicates} doublon(s) ignoré(s) automatiquement.` : undefined,
+        description: [
+          r.data.matched ? `${r.data.matched} rapproché(s) d'une opération déjà saisie (facture).` : null,
+          r.data.duplicates ? `${r.data.duplicates} doublon(s) ignoré(s) automatiquement.` : null,
+        ].filter(Boolean).join(" ") || undefined,
       });
       setOpen(false);
       router.push(`?compte=${accountId}&vue=pending`);
