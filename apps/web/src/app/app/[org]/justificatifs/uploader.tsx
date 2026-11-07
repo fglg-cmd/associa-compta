@@ -1,7 +1,7 @@
 "use client";
 import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { CheckCircle2, FileUp, Loader2, Upload, XCircle } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { CheckCircle2, FileUp, Loader2, ReceiptText, Upload, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { formatEUR } from "@associa/accounting";
 import { getBrowserClient } from "@/lib/supabase/browser";
@@ -13,10 +13,11 @@ import { Field, Select } from "@/components/ui/input";
 import { cn, formatBytes } from "@/lib/utils";
 import { compressImage } from "@/lib/image-compress";
 
-type Item = { file: File; state: "queued" | "uploading" | "reading" | "done" | "error"; message?: string };
+type Item = { file: File; state: "queued" | "uploading" | "reading" | "done" | "error"; message?: string; docId?: string; canCreate?: boolean };
 
 export function Uploader({ orgId, folders, defaultFolder, txId, defaultOpen }: { orgId: string; folders: string[]; defaultFolder: string; txId?: string; defaultOpen?: boolean }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [open, setOpen] = useState(Boolean(defaultOpen));
   const [items, setItems] = useState<Item[]>([]);
   const [folder, setFolder] = useState(defaultFolder);
@@ -39,14 +40,14 @@ export function Uploader({ orgId, folders, defaultFolder, txId, defaultOpen }: {
     if (up.error) { update(i, { state: "error", message: up.error.message }); return; }
     const reg = await registerDocument(orgId, { id: prep.data.id, name: file.name, path: prep.data.path, mime, size: file.size, folder, txId: i === 0 && txId ? txId : null });
     if (!reg.ok) { update(i, { state: "error", message: reg.error }); return; }
-    update(i, { state: "reading" });
+    update(i, { state: "reading", docId: prep.data.id });
     try {
       const res = await fetch(`/api/documents/${prep.data.id}/ocr`, { method: "POST" });
       const json = (await res.json()) as { status: string; fields?: { amount: number | null; vendor: string | null }; matchedTx?: string | null; message?: string };
       const bits = [json.fields?.vendor, json.fields?.amount ? formatEUR(json.fields.amount) : null, json.matchedTx ? "rattaché au mouvement bancaire" : null].filter(Boolean);
-      update(i, { state: "done", message: json.status === "done" ? bits.join(" · ") || "Texte indexé" : json.message });
+      update(i, { state: "done", message: json.status === "done" ? bits.join(" · ") || "Texte indexé" : json.message, canCreate: !json.matchedTx });
     } catch {
-      update(i, { state: "done", message: "Enregistré (lecture automatique indisponible)" });
+      update(i, { state: "done", message: "Enregistré (lecture automatique indisponible)", canCreate: true });
     }
   }
 
@@ -98,6 +99,11 @@ export function Uploader({ orgId, folders, defaultFolder, txId, defaultOpen }: {
                       {it.message ?? (it.state === "uploading" ? "Envoi…" : it.state === "reading" ? "Lecture du montant, de la date et du fournisseur…" : formatBytes(it.file.size))}
                     </span>
                   </span>
+                  {it.state === "done" && it.canCreate && it.docId && (
+                    <Button size="sm" variant="primary" disabled={busy} onClick={() => { setOpen(false); setItems([]); router.push(`${pathname}?doc=${it.docId}&creer=1`); }}>
+                      <ReceiptText /> Créer la dépense
+                    </Button>
+                  )}
                 </li>
               ))}
             </ul>

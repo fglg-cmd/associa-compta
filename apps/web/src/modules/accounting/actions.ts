@@ -23,6 +23,7 @@ const simpleSchema = z.object({
   paymentAccountId: z.uuid("Choisissez le moyen de paiement."),
   projectId: z.union([z.literal(""), z.uuid()]).optional(),
   reference: z.string().trim().max(80).optional(),
+  documentId: z.union([z.literal(""), z.uuid()]).optional(),
 });
 
 /**
@@ -63,6 +64,10 @@ export async function createSimpleEntry(orgId: string, form: FormData) {
         p_project: project,
       }),
     ) as string;
+    // Saisie depuis un justificatif : on le rattache à l'écriture créée.
+    if (v.documentId) {
+      unwrap(await supabase.from("documents").update({ entry_id: id }).eq("id", v.documentId).eq("organization_id", orgId).is("entry_id", null));
+    }
     revalidatePath(`/app/${org.slug}`, "layout");
     return id;
   });

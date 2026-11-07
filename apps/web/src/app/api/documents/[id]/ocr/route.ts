@@ -21,7 +21,9 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     await supabase.from("documents").update({ ocr_status: "failed" }).eq("id", id);
     return NextResponse.json({ error: "Fichier introuvable dans le stockage" }, { status: 500 });
   }
-  const result = await runOcr(Buffer.from(await file.data.arrayBuffer()), doc.mime_type as string);
+  // Le nom de l'association est exclu de la détection du fournisseur (c'est le client de la facture).
+  const { data: org } = await supabase.from("organizations").select("name").eq("id", doc.organization_id).maybeSingle<{ name: string }>();
+  const result = await runOcr(Buffer.from(await file.data.arrayBuffer()), doc.mime_type as string, { exclude: org?.name ? [org.name] : [] });
   await supabase
     .from("documents")
     .update({

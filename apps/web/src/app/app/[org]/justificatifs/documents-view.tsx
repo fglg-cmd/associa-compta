@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { Download, FileImage, FileSpreadsheet, FileText, FolderOpen, Link2, Loader2, RefreshCw, Trash2 } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Download, FileImage, FileSpreadsheet, FileText, FolderOpen, Link2, Loader2, ReceiptText, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatEUR } from "@associa/accounting";
 import { deleteDocument, getDocumentUrl, updateDocument } from "@/modules/documents/actions";
@@ -13,6 +13,7 @@ import { Field, Select } from "@/components/ui/input";
 import { EmptyState } from "@/components/ui/misc";
 import type { DocumentRow } from "@/lib/types";
 import { cn, fmtDate, fmtDateShort, formatBytes } from "@/lib/utils";
+import { DocumentOperation } from "./document-operation";
 
 type Tx = { id: string; date: string; label: string; amount: number };
 
@@ -42,18 +43,30 @@ function Preview({ orgId, doc }: { orgId: string; doc: DocumentRow }) {
   );
 }
 
-export function DocumentsView({ orgId, docs, canWrite, folders, transactions, openId, searching }: { orgId: string; docs: DocumentRow[]; canWrite: boolean; folders: string[]; transactions: Tx[]; openId?: string; searching: boolean }) {
+export function DocumentsView({ orgId, docs, canWrite, folders, transactions, openId, openCreate, searching }: { orgId: string; docs: DocumentRow[]; canWrite: boolean; folders: string[]; transactions: Tx[]; openId?: string; openCreate?: boolean; searching: boolean }) {
   const router = useRouter();
   const [selected, setSelected] = useState<DocumentRow | null>(() => docs.find((d) => d.id === openId) ?? null);
+  const [creating, setCreating] = useState(Boolean(openId && openCreate));
+  useEffect(() => {
+    const d = openId ? docs.find((x) => x.id === openId) : undefined;
+    if (d) { setSelected(d); setCreating(Boolean(openCreate) && !d.entry_id && !d.bank_transaction_id); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openId, openCreate]);
+  const pathname = usePathname();
+  const close = () => {
+    setSelected(null);
+    setCreating(false);
+    if (openId) router.replace(pathname); // ouvert depuis un lien : on revient à la liste complète
+  };
   const [pending, start] = useTransition();
   const txById = new Map(transactions.map((t) => [t.id, t]));
 
-  const act = (fn: () => Promise<{ ok: boolean; error?: string }>, msg: string, close = false) =>
+  const act = (fn: () => Promise<{ ok: boolean; error?: string }>, msg: string, closeAfter = false) =>
     start(async () => {
       const r = await fn();
       if (!r.ok) { toast.error(r.error); return; }
       toast.success(msg);
-      if (close) setSelected(null);
+      if (closeAfter) close();
       router.refresh();
     });
 
@@ -111,12 +124,19 @@ export function DocumentsView({ orgId, docs, canWrite, folders, transactions, op
         </ul>
       </Card>
 
-      <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+      <Dialog open={!!selected} onOpenChange={(o) => !o && close()}>
         {selected && (
-          <DialogContent title={selected.name} description={`${selected.folder} · ${formatBytes(selected.size_bytes)} · ajouté le ${fmtDate(selected.created_at)}`} wide>
-            <div className="grid gap-5 md:grid-cols-[1fr_260px]">
+          <DialogContent title={creating ? "Enregistrer l'opération" : selected.name} description={creating ? `D'après le justificatif « ${selected.name} »` : `${selected.folder} · ${formatBytes(selected.size_bytes)} · ajouté le ${fmtDate(selected.created_at)}`} wide>
+            <div className={cn("grid gap-5", creating ? "md:grid-cols-[1fr_400px]" : "md:grid-cols-[1fr_260px]")}>
               <Preview orgId={orgId} doc={selected} />
+              {creating ? (
+                <DocumentOperation key={selected.id} orgId={orgId} docId={selected.id} onDone={() => setCreating(false)} onCreated={() => { close(); router.refresh(); }} />
+              ) : (
               <div className="grid content-start gap-4 text-[13px]">
+                {canWrite && !selected.entry_id && !selected.bank_transaction_id && (
+                  <Button variant="primary" onClick={() => setCreating(true)}><ReceiptText /> Créer la dépense ou la recette</Button>
+                )}
+                {selected.entry_id && <p className="rounded-lg bg-positive-soft px-3 py-2 text-[12.5px] text-positive">Ce justificatif est rattaché à une opération enregistrée.</p>}
                 <dl className="grid gap-2 rounded-lg border border-border p-3">
                   <div className="flex justify-between"><dt className="text-muted">Montant lu</dt><dd className="font-semibold tabular">{selected.extracted_amount ? formatEUR(selected.extracted_amount) : "—"}</dd></div>
                   <div className="flex justify-between"><dt className="text-muted">Date</dt><dd>{selected.extracted_date ? fmtDate(selected.extracted_date) : "—"}</dd></div>
@@ -149,6 +169,7 @@ export function DocumentsView({ orgId, docs, canWrite, folders, transactions, op
                   <p className="rounded-md bg-warning-soft px-2.5 py-2 text-xs text-warning">La lecture automatique n&apos;a pas abouti. Cliquez sur « Relire » pour réessayer.</p>
                 )}
               </div>
+              )}
             </div>
           </DialogContent>
         )}

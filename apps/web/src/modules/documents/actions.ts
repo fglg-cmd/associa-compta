@@ -4,7 +4,11 @@ import { z } from "zod";
 import { requireOrgMember, requireOrgWriter } from "@/lib/auth";
 import { run, unwrap } from "@/lib/action";
 import { planOf } from "@/lib/plans";
-import { addDaysISO } from "@/lib/utils";
+import { addDaysISO, todayISO } from "@/lib/utils";
+import { categorize } from "@associa/bank-import";
+import { extractReference } from "@/lib/ocr-extract";
+import { getAccounts, getBankAccounts, resolveFiscalYear } from "@/modules/accounting/queries";
+import type { CategorizationRule } from "@/lib/types";
 import { ALLOWED_MIME, MAX_DOCUMENT_BYTES } from "./constants";
 
 const safeName = (n: string) =>
@@ -133,5 +137,97 @@ export async function getDocumentUrl(orgId: string, docId: string, download = fa
     const { data, error } = await supabase.storage.from("documents").createSignedUrl(doc.storage_path, 600, download ? { download: doc.name } : undefined);
     if (error) throw error;
     return data.signedUrl;
+  });
+}
+
+export interface OperationDraft {
+  direction: "in" | "out";
+  label: string;
+  amount: number | null;
+  date: string;
+  dateFromDocument: boolean;
+  reference: string;
+  categoryAccountId: string;
+  categoryGuessed: boolean;
+}
+
+export interface OperationFormData {
+  draft: OperationDraft;
+  accounts: { id: string; number: string; label: string; is_active: boolean }[];
+  treasury: { id: string; label: string }[];
+  projects: { id: string; name: string }[];
+  minDate: string;
+  maxDate: string;
+}
+
+/**
+ * Prépare la saisie d'une dépense (ou recette) à partir d'un justificatif lu :
+ * montant, date, libellé, référence et catégorie proposée (règles apprises, puis mots-clés).
+ */
+export async function getOperationDraft(orgId: string, docId: string) {
+  return run(async (): Promise<OperationFormData> => {
+    const { supabase } = await requireOrgWriter(orgId);
+    const { data: doc } = await supabase
+      .from("documents")
+      .select("name, extracted_amount, extracted_date, extracted_vendor, ocr_text, entry_id, bank_transaction_id")
+      .eq("id", docId)
+      .eq("organization_id", orgId)
+      .maybeSingle<{ name: string; extracted_amount: number | null; extracted_date: string | null; extracted_vendor: string | null; ocr_text: string | null; entry_id: string | null; bank_transaction_id: string | null }>();
+    if (!doc) throw new Error("Document introuvable.");
+    if (doc.entry_id || doc.bank_transaction_id) throw new Error("Ce justificatif est déjà rattaché à une opération.");
+
+    const [fy, accounts, banks, { data: projects }, { data: rules }] = await Promise.all([
+      resolveFiscalYear(orgId),
+      getAccounts(orgId),
+      getBankAccounts(orgId),
+      supabase.from("projects").select("id, name").eq("organization_id", orgId).neq("status", "closed").order("name"),
+      supabase.from("categorization_rules").select("*").eq("organization_id", orgId).eq("is_active", true),
+    ]);
+    if (!fy || fy.status !== "open") throw new Error("Aucun exercice ouvert : ouvrez l'exercice en cours dans Comptabilité.");
+
+    const amount = doc.extracted_amount && doc.extracted_amount > 0 ? doc.extracted_amount : null;
+    const text = `${doc.extracted_vendor ?? ""}\n${(doc.ocr_text ?? "").slice(0, 4000)}`;
+    const ruleList = ((rules ?? []) as CategorizationRule[]).map((r) => ({
+      id: r.id,
+      matchType: r.match_type,
+      pattern: r.pattern,
+      direction: r.direction,
+      minAmount: r.min_amount,
+      maxAmount: r.max_amount,
+      accountId: r.account_id,
+      projectId: r.project_id,
+      priority: r.priority,
+      isActive: r.is_active,
+    }));
+    const suggestion = categorize({ label: text, amount: -(amount ?? 1) }, ruleList);
+    const byNumber = new Map(accounts.filter((a) => a.is_active).map((a) => [a.number, a.id]));
+    const guessed = suggestion?.accountId ?? (suggestion?.accountNumber ? byNumber.get(suggestion.accountNumber) : undefined);
+    const categoryAccountId = guessed && accounts.some((a) => a.id === guessed && a.number.startsWith("6")) ? guessed : "";
+
+    const inYear = (d: string | null) => Boolean(d && d >= fy.start_date && d <= fy.end_date);
+    const today = todayISO();
+    const fallbackDate = today < fy.start_date ? fy.start_date : today > fy.end_date ? fy.end_date : today;
+    const vendor = doc.extracted_vendor?.trim();
+
+    return {
+      draft: {
+        direction: "out",
+        label: vendor ? `Facture ${vendor}`.slice(0, 250) : doc.name.replace(/\.[a-z0-9]{2,5}$/i, "").slice(0, 250),
+        amount,
+        date: inYear(doc.extracted_date) ? doc.extracted_date! : fallbackDate,
+        dateFromDocument: inYear(doc.extracted_date),
+        reference: (doc.ocr_text ? extractReference(doc.ocr_text) : null)?.slice(0, 80) ?? "",
+        categoryAccountId,
+        categoryGuessed: Boolean(categoryAccountId),
+      },
+      accounts: accounts.map((a) => ({ id: a.id, number: a.number, label: a.label, is_active: a.is_active })),
+      treasury: [
+        ...banks.filter((b) => !b.is_archived).map((b) => ({ id: b.account_id, label: b.name })),
+        ...accounts.filter((a) => a.number === "530").map((a) => ({ id: a.id, label: "Caisse (espèces)" })),
+      ],
+      projects: (projects ?? []) as { id: string; name: string }[],
+      minDate: fy.start_date,
+      maxDate: fy.end_date,
+    };
   });
 }

@@ -12,7 +12,7 @@ export interface OcrResult {
   message?: string;
 }
 
-const empty = { amount: null, date: null, vendor: null };
+const empty = { amount: null, date: null, vendor: null, reference: null };
 
 async function visionAnnotate(bytes: Buffer, mime: string): Promise<string> {
   const key = serverEnv.googleVisionApiKey!;
@@ -68,14 +68,27 @@ function getWorker() {
   return workerPromise;
 }
 
-/** Réduit une image trop grande (et la passe en niveaux de gris) avant la lecture. */
+/**
+ * Prépare une photo pour la lecture : redressement EXIF, mise à l'échelle autour de
+ * 2 000 px de large (les grandes photos sont réduites pour aller vite ; les petites images,
+ * comme une facture enregistrée depuis internet, sont agrandies car Tesseract lit très mal
+ * les petits caractères), niveaux de gris, contraste et netteté.
+ */
 async function prepareImage(bytes: Buffer): Promise<Buffer> {
   try {
     const sharp = (await import("sharp")).default;
-    const img = sharp(bytes, { failOn: "none" }).rotate();
-    const meta = await img.metadata();
-    if (Math.max(meta.width ?? 0, meta.height ?? 0) <= MAX_SIDE) return bytes;
-    return await img.resize({ width: MAX_SIDE, height: MAX_SIDE, fit: "inside", withoutEnlargement: true }).grayscale().jpeg({ quality: 85 }).toBuffer();
+    const meta = await sharp(bytes, { failOn: "none" }).metadata();
+    const w = meta.autoOrient?.width ?? meta.width ?? MAX_SIDE;
+    const h = meta.autoOrient?.height ?? meta.height ?? MAX_SIDE;
+    const scale = Math.max(w, h) > MAX_SIDE ? MAX_SIDE / Math.max(w, h) : Math.min(4, MAX_SIDE / w, 5000 / Math.max(w, h));
+    return await sharp(bytes, { failOn: "none" })
+      .rotate()
+      .resize({ width: Math.max(1, Math.round(w * scale)), kernel: "lanczos3" })
+      .grayscale()
+      .normalize()
+      .sharpen()
+      .png({ compressionLevel: 1 })
+      .toBuffer();
   } catch {
     return bytes; // sharp indisponible : lecture de l'image d'origine
   }
@@ -116,7 +129,7 @@ async function tesseract(bytes: Buffer): Promise<string> {
  * PDF natif → couche texte ; PDF scanné / image → Google Vision (si clé) ou
  * Tesseract (images) ; Word → mammoth ; Excel → exceljs.
  */
-export async function runOcr(bytes: Buffer, mime: string): Promise<OcrResult> {
+export async function runOcr(bytes: Buffer, mime: string, opts: { exclude?: string[] } = {}): Promise<OcrResult> {
   try {
     let text = "";
     let engine: OcrResult["engine"] = "none";
@@ -160,7 +173,7 @@ export async function runOcr(bytes: Buffer, mime: string): Promise<OcrResult> {
     }
 
     text = text.replace(/\u0000/g, "").slice(0, 100_000);
-    return { status: "done", text, engine, fields: extractFields(text) };
+    return { status: "done", text, engine, fields: extractFields(text, opts) };
   } catch (e) {
     console.error("[ocr]", e);
     return { status: "failed", text: "", engine: "none", fields: empty, message: (e as Error).message };

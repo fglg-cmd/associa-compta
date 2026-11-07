@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractAmount, extractDate, extractVendor } from "./ocr-extract";
+import { extractAmount, extractDate, extractFields, extractReference, extractVendor } from "./ocr-extract";
 
 const invoice = `LEROY MERLIN FRANCE SAS
 Rue Chanzy 59260 Lezennes
@@ -27,4 +27,48 @@ describe("extraction OCR", () => {
     expect(extractAmount("Article A 12,00 €\nArticle B 30,50 €")).toBe(3050);
   });
   it("renvoie null sans montant", () => expect(extractAmount("Bonjour")).toBeNull());
+
+  it("lit les montants sans centimes (« 2940€ »)", () => {
+    expect(extractAmount("Soustotal: | 2450€\nTVA (20%) : 490€\nTOTAL: — 2940€")).toBe(294000);
+  });
+  it("ignore le sous-total et la ligne de TVA", () => {
+    expect(extractAmount("Sous-total 2 450 €\nTotal TVA 490 €\nTotal 2 940 €")).toBe(294000);
+  });
+  it("accepte « € 125 » et « 1.250 EUR »", () => {
+    expect(extractAmount("Montant à régler : € 125")).toBe(12500);
+    expect(extractAmount("Net à payer 1.250 EUR")).toBe(125000);
+  });
+  it("accepte un entier seul en fin de ligne de total", () => {
+    expect(extractAmount("TOTAL TTC : 2940")).toBe(294000);
+    expect(extractAmount("Total 3 articles")).toBeNull();
+  });
+  it("trouve le numéro de facture", () => {
+    expect(extractReference(invoice)).toBe("F-2026-0042");
+    expect(extractReference("#12345\nCélia Naudin")).toBe("12345");
+    expect(extractReference("Facture\nDate : 12/03/2026")).toBeNull();
+  });
+  it("n'indique pas l'association elle-même comme fournisseur", () => {
+    expect(extractVendor("Club de Tennis TTS\nLEROY MERLIN FRANCE SAS", ["Club de tennis TTS"])).toBe("LEROY MERLIN FRANCE SAS");
+  });
+  it("facture réelle lue par OCR (photo basse résolution)", () => {
+    const ocr = `#12345
+Célia Naudin
+
+123-456-7600 Date c'émision 0/01/2026
+helogrealygreiste com Enreprise Concordia
+Description
+Création de logo 1000 €
+Carte de visite 300 €
+Refonte du site web 900 €
+Bannière publicitaire 250 €
+Soustotal: | 2450€
+TVA (20%) : 490€
+TOTAL: — 2940€
+Paiement sous 30 jours
+N° de compte 0123 4567 8901 2345`;
+    const f = extractFields(ocr);
+    expect(f.amount).toBe(294000);
+    expect(f.vendor).toBe("Célia Naudin");
+    expect(f.reference).toBe("12345");
+  });
 });

@@ -15,7 +15,7 @@ export default async function DocumentsPage({
   searchParams,
 }: {
   params: Promise<{ org: string }>;
-  searchParams: Promise<{ dossier?: string; q?: string; filtre?: string; action?: string; tx?: string; doc?: string }>;
+  searchParams: Promise<{ dossier?: string; q?: string; filtre?: string; action?: string; tx?: string; doc?: string; creer?: string }>;
 }) {
   const { org: slug } = await params;
   const sp = await searchParams;
@@ -85,6 +85,7 @@ export default async function DocumentsPage({
         folders={folders}
         transactions={(txs ?? []) as { id: string; date: string; label: string; amount: number }[]}
         openId={sp.doc}
+        openCreate={sp.creer === "1"}
         searching={Boolean(sp.q)}
       />
     </>

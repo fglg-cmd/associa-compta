@@ -20,9 +20,20 @@ function clampDate(min: string, max: string) {
   return t < min ? min : t > max ? max : t;
 }
 
-function SimpleForm({ orgId, accounts, treasury, projects, onDone, minDate, maxDate }: { orgId: string; accounts: Acc[]; treasury: { id: string; label: string }[]; projects: Pick<Project, "id" | "name">[]; onDone: () => void; minDate: string; maxDate: string }) {
-  const [direction, setDirection] = useState<"in" | "out">("out");
-  const [category, setCategory] = useState("");
+export interface SimpleInitial {
+  direction?: "in" | "out";
+  label?: string;
+  amount?: number | null;
+  date?: string;
+  categoryAccountId?: string;
+  reference?: string;
+}
+
+const centsToInput = (c: number) => (c / 100).toFixed(2).replace(".", ",");
+
+export function SimpleForm({ orgId, accounts, treasury, projects, onDone, minDate, maxDate, initial, documentId, onCreated }: { orgId: string; accounts: Acc[]; treasury: { id: string; label: string }[]; projects: Pick<Project, "id" | "name">[]; onDone: () => void; minDate: string; maxDate: string; initial?: SimpleInitial; documentId?: string; onCreated?: (entryId: string) => void }) {
+  const [direction, setDirection] = useState<"in" | "out">(initial?.direction ?? "out");
+  const [category, setCategory] = useState(initial?.categoryAccountId ?? "");
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -32,9 +43,11 @@ function SimpleForm({ orgId, accounts, treasury, projects, onDone, minDate, maxD
         start(async () => {
           fd.set("direction", direction);
           fd.set("categoryAccountId", category);
+          if (documentId) fd.set("documentId", documentId);
           const r = await createSimpleEntry(orgId, fd);
           if (!r.ok) return setError(r.error);
           toast.success(direction === "in" ? "Recette enregistrée" : "Dépense enregistrée");
+          onCreated?.(r.data);
           onDone();
           router.refresh();
         })
@@ -49,11 +62,11 @@ function SimpleForm({ orgId, accounts, treasury, projects, onDone, minDate, maxD
         ))}
       </div>
       <div className="grid grid-cols-[1fr_140px] gap-3">
-        <Field label="Libellé" htmlFor="s-label"><Input id="s-label" name="label" required placeholder={direction === "out" ? "Achat de ballons" : "Recette buvette"} /></Field>
-        <Field label="Montant" htmlFor="s-amount"><Input id="s-amount" name="amount" required inputMode="decimal" placeholder="0,00 €" className="text-right tabular" /></Field>
+        <Field label="Libellé" htmlFor="s-label"><Input id="s-label" name="label" required defaultValue={initial?.label} placeholder={direction === "out" ? "Achat de ballons" : "Recette buvette"} /></Field>
+        <Field label="Montant" htmlFor="s-amount"><Input id="s-amount" name="amount" required inputMode="decimal" defaultValue={initial?.amount ? centsToInput(initial.amount) : undefined} placeholder="0,00 €" className="text-right tabular" /></Field>
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Date" htmlFor="s-date"><Input id="s-date" name="date" type="date" required defaultValue={clampDate(minDate, maxDate)} min={minDate} max={maxDate} /></Field>
+        <Field label="Date" htmlFor="s-date"><Input id="s-date" name="date" type="date" required defaultValue={initial?.date ?? clampDate(minDate, maxDate)} min={minDate} max={maxDate} /></Field>
         <Field label={direction === "out" ? "Payé depuis" : "Encaissé sur"}>
           <Select name="paymentAccountId" required defaultValue={treasury[0]?.id}>
             {treasury.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
@@ -70,7 +83,7 @@ function SimpleForm({ orgId, accounts, treasury, projects, onDone, minDate, maxD
             </Select>
           </Field>
         )}
-        <Field label="Référence" htmlFor="s-ref" hint="N° de facture, de chèque…"><Input id="s-ref" name="reference" /></Field>
+        <Field label="Référence" htmlFor="s-ref" hint="N° de facture, de chèque…"><Input id="s-ref" name="reference" defaultValue={initial?.reference} /></Field>
       </div>
       {error && <p className="text-[13px] text-negative">{error}</p>}
       <DialogFooter>
