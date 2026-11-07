@@ -242,6 +242,8 @@ async function autoMatchExistingEntries(
     if (!error) {
       taken.add(candidates[0]!);
       matched++;
+      // Le justificatif de l'opération justifie désormais aussi ce mouvement bancaire.
+      await supabase.from("documents").update({ bank_transaction_id: tx.id }).eq("organization_id", orgId).eq("entry_id", candidates[0]!).is("bank_transaction_id", null);
     }
   }
   return matched;

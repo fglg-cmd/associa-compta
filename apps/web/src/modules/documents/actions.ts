@@ -276,6 +276,19 @@ export async function autoCreateOperation(orgId: string, docId: string): Promise
   }
   const { draft } = ctx;
   if (!draft.amount) return { created: false, reason: "Montant non lu : complétez l'opération." };
+  // Même facture déjà envoyée (même montant, même date lue, déjà enregistrée) : pas de doublon.
+  if (draft.dateFromDocument) {
+    const { data: twins } = await supabase
+      .from("documents")
+      .select("id")
+      .eq("organization_id", orgId)
+      .eq("extracted_amount", draft.amount)
+      .eq("extracted_date", draft.date)
+      .neq("id", docId)
+      .or("entry_id.not.is.null,bank_transaction_id.not.is.null")
+      .limit(1);
+    if (twins?.length) return { created: false, reason: "Facture déjà enregistrée (doublon probable) : rien n'a été créé." };
+  }
   const payment = ctx.treasury[0];
   if (!payment) return { created: false, reason: "Aucun compte bancaire ni caisse." };
 
