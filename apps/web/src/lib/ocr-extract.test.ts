@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { detectDirection, extractAmount, extractDate, extractFields, extractReference, extractVendor } from "./ocr-extract";
+import { checkTotal, detectDirection, extractAmount, extractDate, extractFields, extractReference, extractVendor } from "./ocr-extract";
 
 const invoice = `LEROY MERLIN FRANCE SAS
 Rue Chanzy 59260 Lezennes
@@ -80,5 +80,12 @@ N° de compte 0123 4567 8901 2345`;
     const clientEnTete = "Client : Club de Tennis TTS\nLEROY MERLIN\nTotal 50,00 €";
     expect(detectDirection(clientEnTete, ["Club de tennis TTS"])).toBe("out");
     expect(detectDirection("LEROY MERLIN\nTotal 50,00 €", ["TTS"])).toBe("out");
+  });
+
+  it("contrôle HT + TVA = total", () => {
+    expect(checkTotal("Sous-total : 2450€\nTVA (20%) : 490€\nTOTAL : 2940€", 294000)).toBe("consistent");
+    expect(checkTotal("Sous-total : 2450€\nTVA (20%) : 490€\nTOTAL : 2840€", 284000)).toBe("inconsistent");
+    expect(checkTotal("TOTAL TTC 30,40 EUR", 3040)).toBe("unknown");
+    expect(checkTotal(invoice, 10030)).toBe("consistent");
   });
 });

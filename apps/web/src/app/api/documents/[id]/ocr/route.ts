@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { formatEUR } from "@associa/accounting";
 import { runOcr } from "@/lib/ocr";
+import { checkTotal } from "@/lib/ocr-extract";
 import { autoCreateOperation, autoMatchDocument, type AutoOperation } from "@/modules/documents/actions";
 
 export const runtime = "nodejs";
@@ -39,6 +41,17 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const linked = Boolean(doc.entry_id || doc.bank_transaction_id);
   const matchedTx = result.status === "done" && !linked ? await autoMatchDocument(orgId, id) : null;
   // Pas de mouvement bancaire correspondant : la dépense (ou recette) est créée directement.
-  const operation: AutoOperation | null = result.status === "done" && !linked && !matchedTx ? await autoCreateOperation(orgId, id) : null;
+  // Lecture fiable seulement : texte natif (PDF, Word…), ou photo lue avec une confiance d'au
+  // moins 75 %, et jamais si HT + TVA contredit le total. Une photo floue dont HT + TVA
+  // confirment le total reste fiable. Sinon : formulaire pré-rempli, à vérifier.
+  const amount = result.fields.amount;
+  const check = amount ? checkTotal(result.text, amount) : "unknown";
+  const trusted = check === "consistent" || (check === "unknown" && (result.confidence == null || result.confidence >= 75));
+  let operation: AutoOperation | null = null;
+  if (result.status === "done" && !linked && !matchedTx) {
+    operation = trusted || !amount
+      ? await autoCreateOperation(orgId, id)
+      : { created: false, reason: `Lecture incertaine (${formatEUR(amount)} ?) : vérifiez le montant puis enregistrez.` };
+  }
   return NextResponse.json({ status: result.status, engine: result.engine, fields: result.fields, matchedTx, operation, linked, message: result.message });
 }

@@ -73,6 +73,27 @@ export function extractAmount(text: string): number | null {
   return withSymbol.length ? Math.max(...withSymbol) : null;
 }
 
+/**
+ * Contrôle du total : si le montant hors taxes et la TVA sont lus, leur somme doit être égale
+ * au total. Sert à décider si l'opération peut être créée sans vérification humaine.
+ */
+export function checkTotal(text: string, total: number): "consistent" | "inconsistent" | "unknown" {
+  const lines = text.split(/\r?\n/);
+  const last = (re: RegExp, exclude?: RegExp) => {
+    for (let i = lines.length - 1; i >= 0; i--) {
+      const l = lines[i]!;
+      if (!re.test(l) || exclude?.test(l)) continue;
+      const t = amountsIn(l).filter((x) => x.explicit);
+      if (t.length) return t[t.length - 1]!.cents;
+    }
+    return null;
+  };
+  const ht = last(/sous[\s-]?total|total\s*h\.?t|montant\s*h\.?t/i);
+  const tva = last(/\bt\.?v\.?a\b/i, /total\s*t\.?t\.?c|n[°o]\s*(de\s*)?tva|intracom/i);
+  if (ht === null || tva === null) return "unknown";
+  return ht + tva === total ? "consistent" : "inconsistent";
+}
+
 /** Numéro de facture ou de reçu (« Facture n° F-2026-0042 », « #12345 »). */
 export function extractReference(text: string): string | null {
   const patterns = [

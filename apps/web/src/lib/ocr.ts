@@ -9,6 +9,8 @@ export interface OcrResult {
   text: string;
   engine: "pdf-text" | "google-vision" | "tesseract" | "docx" | "xlsx" | "none";
   fields: ReturnType<typeof extractFields>;
+  /** Confiance moyenne de Tesseract (0-100) ; null pour les autres moteurs. */
+  confidence?: number | null;
   message?: string;
 }
 
@@ -69,10 +71,10 @@ function getWorker() {
 }
 
 /**
- * Prépare une photo pour la lecture : redressement EXIF, mise à l'échelle autour de
- * 2 000 px de large (les grandes photos sont réduites pour aller vite ; les petites images,
- * comme une facture enregistrée depuis internet, sont agrandies car Tesseract lit très mal
- * les petits caractères), niveaux de gris, contraste et netteté.
+ * Prépare une image pour la lecture : redressement EXIF, fond blanc (pages PDF transparentes),
+ * largeur ramenée entre 2 000 et 2 500 px (les petites images, comme une facture enregistrée
+ * depuis internet, sont agrandies : Tesseract lit très mal les petits caractères ; les grandes
+ * photos sont réduites pour aller vite), niveaux de gris, contraste et netteté.
  */
 async function prepareImage(bytes: Buffer): Promise<Buffer> {
   try {
@@ -80,10 +82,12 @@ async function prepareImage(bytes: Buffer): Promise<Buffer> {
     const meta = await sharp(bytes, { failOn: "none" }).metadata();
     const w = meta.autoOrient?.width ?? meta.width ?? MAX_SIDE;
     const h = meta.autoOrient?.height ?? meta.height ?? MAX_SIDE;
-    const scale = Math.max(w, h) > MAX_SIDE ? MAX_SIDE / Math.max(w, h) : Math.min(4, MAX_SIDE / w, 5000 / Math.max(w, h));
+    let target = w > 2500 ? 2500 : w < MAX_SIDE ? Math.min(w * 4, MAX_SIDE) : w;
+    target = Math.max(1, Math.min(target, Math.round((w * 6000) / h))); // tickets très longs
     return await sharp(bytes, { failOn: "none" })
       .rotate()
-      .resize({ width: Math.max(1, Math.round(w * scale)), kernel: "lanczos3" })
+      .flatten({ background: "#ffffff" })
+      .resize({ width: target, kernel: "lanczos3" })
       .grayscale()
       .normalize()
       .sharpen()
@@ -104,14 +108,14 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
   });
 }
 
-async function tesseract(bytes: Buffer): Promise<string> {
+async function tesseract(bytes: Buffer): Promise<{ text: string; confidence: number }> {
   const input = await prepareImage(bytes);
   try {
     return await withTimeout(
       (async () => {
         const worker = await getWorker();
         const { data } = await worker.recognize(input);
-        return data.text;
+        return { text: data.text, confidence: data.confidence };
       })(),
       OCR_TIMEOUT_MS,
     );
@@ -133,6 +137,7 @@ export async function runOcr(bytes: Buffer, mime: string, opts: { exclude?: stri
   try {
     let text = "";
     let engine: OcrResult["engine"] = "none";
+    let confidence: number | null = null;
 
     if (mime === "application/pdf") {
       const { extractText, getDocumentProxy } = await import("unpdf");
@@ -148,11 +153,17 @@ export async function runOcr(bytes: Buffer, mime: string, opts: { exclude?: stri
           // puis lues par Tesseract, comme une photo. Gratuit, sans clé.
           const { renderPageAsImage } = await import("unpdf");
           const parts: string[] = [];
+          const confidences: number[] = [];
           for (let page = 1; page <= Math.min(2, pdf.numPages); page++) {
-            const png = await renderPageAsImage(pdf, page, { canvasImport: () => import("@napi-rs/canvas"), scale: 3 });
-            parts.push(await tesseract(Buffer.from(png)));
+            // Rendu à environ 2 500 px de large (≈ 300 dpi pour une page A4).
+            const width = (await pdf.getPage(page)).getViewport({ scale: 1 }).width || 595;
+            const png = await renderPageAsImage(pdf, page, { canvasImport: () => import("@napi-rs/canvas"), scale: Math.min(6, 2500 / width) });
+            const r = await tesseract(Buffer.from(png));
+            parts.push(r.text);
+            confidences.push(r.confidence);
           }
           text = parts.join("\n");
+          confidence = confidences.length ? Math.min(...confidences) : null;
           engine = "tesseract";
         }
       }
@@ -161,7 +172,9 @@ export async function runOcr(bytes: Buffer, mime: string, opts: { exclude?: stri
         text = await visionAnnotate(bytes, mime);
         engine = "google-vision";
       } else if (/image\/(png|jpe?g|webp|bmp|gif)/.test(mime)) {
-        text = await tesseract(bytes);
+        const r = await tesseract(bytes);
+        text = r.text;
+        confidence = r.confidence;
         engine = "tesseract";
       } else {
         return { status: "skipped", text: "", engine: "none", fields: empty, message: "Format d'image non pris en charge par l'OCR local." };
@@ -183,7 +196,7 @@ export async function runOcr(bytes: Buffer, mime: string, opts: { exclude?: stri
     }
 
     text = text.replace(/\u0000/g, "").slice(0, 100_000);
-    return { status: "done", text, engine, fields: extractFields(text, opts) };
+    return { status: "done", text, engine, fields: extractFields(text, opts), confidence };
   } catch (e) {
     console.error("[ocr]", e);
     return { status: "failed", text: "", engine: "none", fields: empty, message: (e as Error).message };
