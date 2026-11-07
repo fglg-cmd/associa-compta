@@ -66,6 +66,7 @@ export function ruleMatches(rule: Rule, label: string, amount: number): boolean 
 export function categorize(
   tx: { label: string; rawLabel?: string; amount: number },
   rules: Rule[],
+  opts: { excludeCategories?: readonly string[] } = {},
 ): Suggestion | null {
   const text = `${tx.label} ${tx.rawLabel ?? ""}`;
   const sorted = [...rules].sort((a, b) => a.priority - b.priority);
@@ -78,7 +79,7 @@ export function categorize(
   const dir = tx.amount > 0 ? "in" : "out";
   let best: { cat: Category; len: number } | null = null;
   for (const cat of CATEGORIES) {
-    if (cat.direction !== dir) continue;
+    if (cat.direction !== dir || opts.excludeCategories?.includes(cat.key)) continue;
     for (const kw of cat.keywords) {
       const k = normalizeForMatch(kw);
       if (k && l.includes(k.length <= 4 ? ` ${k} ` : k) && (!best || k.length > best.len)) {

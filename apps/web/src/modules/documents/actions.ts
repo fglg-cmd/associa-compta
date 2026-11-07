@@ -186,7 +186,14 @@ export async function getOperationDraft(orgId: string, docId: string) {
     if (!fy || fy.status !== "open") throw new Error("Aucun exercice ouvert : ouvrez l'exercice en cours dans Comptabilité.");
 
     const amount = doc.extracted_amount && doc.extracted_amount > 0 ? doc.extracted_amount : null;
-    const text = `${doc.extracted_vendor ?? ""}\n${(doc.ocr_text ?? "").slice(0, 4000)}`;
+    // Catégorie : fournisseur et lignes de détail seulement. Les lignes de total, de TVA ou de
+    // paiement sont écartées (« TOTAL » désignerait sinon la station-service du même nom).
+    const detail = (doc.ocr_text ?? "")
+      .slice(0, 4000)
+      .split(/\r?\n/)
+      .filter((l) => !/\b(sous[\s-]?)?total|montant|t\.?v\.?a\b|\bh\.?t\b|t\.?t\.?c|net [àa] payer|paiement|r[èe]glement|iban|bic|siret|siren|[ée]ch[ée]ance/i.test(l))
+      .join("\n");
+    const text = `${doc.extracted_vendor ?? ""}\n${detail}`;
     const ruleList = ((rules ?? []) as CategorizationRule[]).map((r) => ({
       id: r.id,
       matchType: r.match_type,
@@ -199,7 +206,8 @@ export async function getOperationDraft(orgId: string, docId: string) {
       priority: r.priority,
       isActive: r.is_active,
     }));
-    const suggestion = categorize({ label: text, amount: -(amount ?? 1) }, ruleList);
+    // Les frais bancaires et intérêts n'apparaissent pas sur une facture (« frais de port »…).
+    const suggestion = categorize({ label: text, amount: -(amount ?? 1) }, ruleList, { excludeCategories: ["bank_fees", "interest"] });
     const byNumber = new Map(accounts.filter((a) => a.is_active).map((a) => [a.number, a.id]));
     const guessed = suggestion?.accountId ?? (suggestion?.accountNumber ? byNumber.get(suggestion.accountNumber) : undefined);
     const categoryAccountId = guessed && accounts.some((a) => a.id === guessed && a.number.startsWith("6")) ? guessed : "";

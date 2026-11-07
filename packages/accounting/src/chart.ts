@@ -171,7 +171,7 @@ export const CATEGORIES: readonly Category[] = [
   { key: "rent", label: "Loyer et locations", account: "613", direction: "out", keywords: ["loyer", "location"] },
   { key: "insurance", label: "Assurances", account: "616", direction: "out", keywords: ["maif", "macif", "maaf", "axa", "allianz", "groupama", "assurance", "mma"] },
   { key: "fees", label: "Honoraires", account: "622", direction: "out", keywords: ["honoraires", "expert comptable", "avocat"] },
-  { key: "communication", label: "Communication et impression", account: "623", direction: "out", keywords: ["vistaprint", "imprimerie", "canva", "facebook ads", "google ads"] },
+  { key: "communication", label: "Communication et impression", account: "623", direction: "out", keywords: ["vistaprint", "imprimerie", "canva", "facebook ads", "google ads", "affiche", "flyer", "banniere", "publicitaire", "carte de visite", "site web", "site internet", "graphiste", "logo"] },
   { key: "travel", label: "Déplacements et réceptions", account: "625", direction: "out", keywords: ["sncf", "total", "esso", "peage", "autoroute", "restaurant", "uber", "blablacar"] },
   { key: "telecom", label: "Téléphone, internet, poste", account: "626", direction: "out", keywords: ["orange", "free mobile", "sfr", "bouygues", "la poste", "laposte"] },
   { key: "bank_fees", label: "Frais bancaires", account: "627", direction: "out", keywords: ["frais", "commission", "cotisation carte", "abonnement banque", "agios", "tenue de compte"] },

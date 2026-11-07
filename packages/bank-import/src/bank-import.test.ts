@@ -200,3 +200,13 @@ describe("catégorisation", () => {
     expect(suggestRulePattern("Prélèvement Edf Clients")).toBe("edf clients");
   });
 });
+
+describe("catégorisation des justificatifs", () => {
+  it("peut écarter des catégories (frais bancaires sur une facture)", () => {
+    expect(categorize({ label: "Frais de port", amount: -500 }, [])?.accountNumber).toBe("627");
+    expect(categorize({ label: "Frais de port", amount: -500 }, [], { excludeCategories: ["bank_fees"] })).toBeNull();
+  });
+  it("reconnaît une facture de communication", () => {
+    expect(categorize({ label: "Création de logo\nBannière publicitaire", amount: -294000 }, [])?.accountNumber).toBe("623");
+  });
+});
