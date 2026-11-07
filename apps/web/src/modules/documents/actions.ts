@@ -150,6 +150,8 @@ export interface OperationDraft {
   reference: string;
   categoryAccountId: string;
   categoryGuessed: boolean;
+  /** Banque par défaut ; caisse si le ticket indique un paiement en espèces. */
+  paymentAccountId: string;
 }
 
 export interface OperationFormData {
@@ -226,6 +228,12 @@ async function buildOperation(supabase: Supa, orgId: string, orgName: string, do
       ? vendor ? `Facture ${vendor}` : baseName
       : reference ? `Facture n° ${reference}` : baseName;
 
+  const treasury = [
+    ...banks.filter((b) => !b.is_archived).map((b) => ({ id: b.account_id, label: b.name })),
+    ...accounts.filter((a) => a.number === "530").map((a) => ({ id: a.id, label: "Caisse (espèces)" })),
+  ];
+  const cash = /\b(esp[eè]ces|cash|liquide)\b/i.test(text) ? accounts.find((a) => a.number === "530" && a.is_active) : undefined;
+
   return {
     draft: {
       direction,
@@ -236,12 +244,10 @@ async function buildOperation(supabase: Supa, orgId: string, orgName: string, do
       reference,
       categoryAccountId,
       categoryGuessed: Boolean(categoryAccountId),
+      paymentAccountId: cash?.id ?? treasury[0]?.id ?? "",
     },
     accounts: accounts.map((a) => ({ id: a.id, number: a.number, label: a.label, is_active: a.is_active })),
-    treasury: [
-      ...banks.filter((b) => !b.is_archived).map((b) => ({ id: b.account_id, label: b.name })),
-      ...accounts.filter((a) => a.number === "530").map((a) => ({ id: a.id, label: "Caisse (espèces)" })),
-    ],
+    treasury,
     projects: (projects ?? []) as { id: string; name: string }[],
     minDate: fy.start_date,
     maxDate: fy.end_date,
@@ -289,7 +295,7 @@ export async function autoCreateOperation(orgId: string, docId: string): Promise
       .limit(1);
     if (twins?.length) return { created: false, reason: "Facture déjà enregistrée (doublon probable) : rien n'a été créé." };
   }
-  const payment = ctx.treasury[0];
+  const payment = ctx.treasury.find((t) => t.id === draft.paymentAccountId) ?? ctx.treasury[0];
   if (!payment) return { created: false, reason: "Aucun compte bancaire ni caisse." };
 
   const fallback = ctx.accounts.find((a) => a.is_active && a.number === (draft.direction === "in" ? "758" : "658"));

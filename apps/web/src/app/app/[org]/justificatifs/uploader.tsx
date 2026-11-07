@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { CheckCircle2, FileUp, Loader2, ReceiptText, Undo2, Upload, XCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -25,14 +25,17 @@ export function Uploader({ orgId, folders, defaultFolder, txId, defaultOpen }: {
   const [busy, setBusy] = useState(false);
   const input = useRef<HTMLInputElement>(null);
 
-  const add = (files: FileList | File[]) => setItems((cur) => [...cur, ...[...files].map((file) => ({ file, state: "queued" as const }))]);
+  const count = useRef(0);
+  const active = useRef(0);
+  const folderRef = useRef(folder);
+  folderRef.current = folder;
   const update = (i: number, patch: Partial<Item>) => setItems((cur) => cur.map((it, j) => (j === i ? { ...it, ...patch } : it)));
 
   /** Envoie un document puis lance sa lecture automatique. */
-  async function processOne(i: number, supabase: ReturnType<typeof getBrowserClient>) {
-    const original = items[i]!;
+  async function processOne(i: number, original: File, supabase: ReturnType<typeof getBrowserClient>) {
+    const folder = folderRef.current;
     update(i, { state: "uploading" });
-    const file = await compressImage(original.file);
+    const file = await compressImage(original);
     const mime = file.type || "application/octet-stream";
     const prep = await prepareUpload(orgId, { name: file.name, size: file.size, mime });
     if (!prep.ok) { update(i, { state: "error", message: prep.error }); return; }
@@ -59,23 +62,49 @@ export function Uploader({ orgId, folders, defaultFolder, txId, defaultOpen }: {
     }
   }
 
-  async function uploadAll() {
-    setBusy(true);
+  /** Les fichiers partent dès qu'ils sont déposés : pas de bouton « Envoyer » (3 en parallèle). */
+  function add(list: FileList | File[]) {
+    const files = [...list];
+    if (!files.length) return;
+    const first = count.current;
+    count.current += files.length;
+    setItems((cur) => [...cur, ...files.map((file) => ({ file, state: "queued" as const }))]);
+    const queue = files.map((file, k) => ({ i: first + k, file }));
     const supabase = getBrowserClient();
-    // Trois documents traités en même temps (au lieu d'un par un).
-    const queue = items.map((it, i) => (it.state === "queued" ? i : -1)).filter((i) => i >= 0);
+    setBusy(true);
+    active.current += 1;
     const runners = Array.from({ length: Math.min(3, queue.length) }, async () => {
-      for (let next = queue.shift(); next !== undefined; next = queue.shift()) await processOne(next, supabase);
+      for (let next = queue.shift(); next; next = queue.shift()) await processOne(next.i, next.file, supabase);
     });
-    await Promise.all(runners);
-    setBusy(false);
-    router.refresh();
-    toast.success("Documents enregistrés");
+    void Promise.all(runners).then(() => {
+      active.current -= 1;
+      if (active.current === 0) {
+        setBusy(false);
+        router.refresh();
+      }
+    });
   }
 
+  // Glisser-déposer n'importe où sur la page : la fenêtre s'ouvre et l'envoi démarre.
+  useEffect(() => {
+    const over = (e: DragEvent) => { if (e.dataTransfer?.types.includes("Files")) e.preventDefault(); };
+    const drop = (e: DragEvent) => {
+      if (!e.dataTransfer?.files.length) return;
+      e.preventDefault();
+      setOpen(true);
+      add(e.dataTransfer.files);
+    };
+    window.addEventListener("dragover", over);
+    window.addEventListener("drop", drop);
+    return () => { window.removeEventListener("dragover", over); window.removeEventListener("drop", drop); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const reset = () => { if (!busy) { setItems([]); count.current = 0; } };
+
   return (
-    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setItems([]); }}>
-      <DialogTrigger asChild><Button variant="primary"><Upload /> Ajouter</Button></DialogTrigger>
+    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) reset(); }}>
+      <DialogTrigger asChild><Button variant="primary"><Upload /> Déposer des justificatifs</Button></DialogTrigger>
       <DialogContent title="Ajouter des documents" description="Déposez vos factures et tickets (PDF ou photo) : chacun est lu et devient automatiquement une dépense, ou une recette si l'association l'a émis.">
         <div className="grid gap-4">
           <Field label="Dossier">
@@ -88,12 +117,12 @@ export function Uploader({ orgId, folders, defaultFolder, txId, defaultOpen }: {
             onClick={() => input.current?.click()}
             onDragOver={(e) => { e.preventDefault(); setDrag(true); }}
             onDragLeave={() => setDrag(false)}
-            onDrop={(e) => { e.preventDefault(); setDrag(false); add(e.dataTransfer.files); }}
+            onDrop={(e) => { e.preventDefault(); e.stopPropagation(); setDrag(false); add(e.dataTransfer.files); }}
             className={cn("flex flex-col items-center gap-2 rounded-xl border border-dashed px-6 py-8 text-center", drag ? "border-accent bg-accent-soft" : "border-border-strong hover:bg-surface-2")}
           >
             <FileUp className="size-6 text-muted" />
             <span className="text-sm font-medium">Déposez vos fichiers ou cliquez pour parcourir</span>
-            <span className="text-xs text-muted">Photographiez un ticket avec votre téléphone : ça marche aussi.</span>
+            <span className="text-xs text-muted">Plusieurs à la fois, PDF ou photos de tickets prises au téléphone. Tout est enregistré automatiquement.</span>
           </button>
           <input ref={input} type="file" multiple accept={Object.keys(ALLOWED_MIME).join(",")} capture={undefined} className="hidden" onChange={(e) => { if (e.target.files) add(e.target.files); e.target.value = ""; }} />
           {items.length > 0 && (
@@ -118,7 +147,7 @@ export function Uploader({ orgId, folders, defaultFolder, txId, defaultOpen }: {
                     </Button>
                   )}
                   {it.state === "done" && it.canCreate && it.docId && (
-                    <Button size="sm" variant="primary" disabled={busy} onClick={() => { setOpen(false); setItems([]); router.push(`${pathname}?doc=${it.docId}&creer=1`); }}>
+                    <Button size="sm" variant="primary" onClick={() => { setOpen(false); reset(); router.push(`${pathname}?doc=${it.docId}&creer=1`); }}>
                       <ReceiptText /> Compléter
                     </Button>
                   )}
@@ -128,8 +157,8 @@ export function Uploader({ orgId, folders, defaultFolder, txId, defaultOpen }: {
           )}
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => setOpen(false)}>Fermer</Button>
-          <Button variant="primary" onClick={uploadAll} loading={busy} disabled={!items.some((i) => i.state === "queued")}>Envoyer</Button>
+          {busy && <span className="mr-auto flex items-center gap-1.5 text-xs text-muted"><Loader2 className="size-3.5 animate-spin" /> Lecture en cours, vous pouvez continuer à déposer…</span>}
+          <Button variant={busy ? "ghost" : "primary"} onClick={() => setOpen(false)}>{items.length && !busy ? "Terminé" : "Fermer"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

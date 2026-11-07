@@ -27,6 +27,7 @@ export interface SimpleInitial {
   date?: string;
   categoryAccountId?: string;
   reference?: string;
+  paymentAccountId?: string;
 }
 
 const centsToInput = (c: number) => (c / 100).toFixed(2).replace(".", ",");
@@ -68,7 +69,7 @@ export function SimpleForm({ orgId, accounts, treasury, projects, onDone, minDat
       <div className="grid grid-cols-2 gap-3">
         <Field label="Date" htmlFor="s-date"><Input id="s-date" name="date" type="date" required defaultValue={initial?.date ?? clampDate(minDate, maxDate)} min={minDate} max={maxDate} /></Field>
         <Field label={direction === "out" ? "Payé depuis" : "Encaissé sur"}>
-          <Select name="paymentAccountId" required defaultValue={treasury[0]?.id}>
+          <Select name="paymentAccountId" required defaultValue={initial?.paymentAccountId || treasury[0]?.id}>
             {treasury.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
           </Select>
         </Field>

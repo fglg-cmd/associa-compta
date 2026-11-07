@@ -140,11 +140,21 @@ export async function runOcr(bytes: Buffer, mime: string, opts: { exclude?: stri
       text = (await extractText(pdf, { mergePages: true })).text;
       engine = "pdf-text";
       if (text.replace(/\s/g, "").length < 30) {
-        if (!serverEnv.googleVisionApiKey) {
-          return { status: "skipped", text: "", engine: "none", fields: empty, message: "PDF scanné : configurez Google Vision pour le lire automatiquement." };
+        if (serverEnv.googleVisionApiKey) {
+          text = await visionAnnotate(bytes, mime);
+          engine = "google-vision";
+        } else {
+          // PDF scanné (une image par page) : les 2 premières pages sont converties en image
+          // puis lues par Tesseract, comme une photo. Gratuit, sans clé.
+          const { renderPageAsImage } = await import("unpdf");
+          const parts: string[] = [];
+          for (let page = 1; page <= Math.min(2, pdf.numPages); page++) {
+            const png = await renderPageAsImage(pdf, page, { canvasImport: () => import("@napi-rs/canvas"), scale: 3 });
+            parts.push(await tesseract(Buffer.from(png)));
+          }
+          text = parts.join("\n");
+          engine = "tesseract";
         }
-        text = await visionAnnotate(bytes, mime);
-        engine = "google-vision";
       }
     } else if (mime.startsWith("image/")) {
       if (serverEnv.googleVisionApiKey) {

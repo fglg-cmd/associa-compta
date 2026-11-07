@@ -33,7 +33,7 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: path.join(__dirname, "../../"),
   poweredByHeader: false,
   transpilePackages: ["@associa/accounting", "@associa/bank-import"],
-  serverExternalPackages: ["tesseract.js", "exceljs", "@react-pdf/renderer", "mammoth", "sharp"],
+  serverExternalPackages: ["tesseract.js", "exceljs", "@react-pdf/renderer", "mammoth", "sharp", "@napi-rs/canvas"],
   // Fichiers chargés dynamiquement (non détectés par le traçage) : polices PDF standard
   // de pdfkit. Sans cela, l'export PDF échoue sur Vercel (« Cannot find module Helvetica »).
   outputFileTracingIncludes: {
@@ -44,7 +44,14 @@ const nextConfig: NextConfig = {
     "/api/documents/[id]/ocr": [
       "./ocr-data/**/*",
       "../../node_modules/.pnpm/tesseract.js-core@*/node_modules/tesseract.js-core/*.wasm",
+      // PDF scannés : moteur de rendu natif (binaire chargé à l'exécution).
+      "../../node_modules/.pnpm/@napi-rs+canvas-linux-x64-gnu@*/node_modules/@napi-rs/canvas-linux-x64-gnu/**/*",
     ],
+  },
+  // Vercel tourne sous glibc : les binaires « musl » (Alpine) sont inutiles et alourdiraient
+  // la fonction de lecture (limite de 250 Mo).
+  outputFileTracingExcludes: {
+    "/api/documents/[id]/ocr": ["../../node_modules/.pnpm/**/*linuxmusl*/**/*", "../../node_modules/.pnpm/**/*linux-x64-musl*/**/*"],
   },
   experimental: {
     serverActions: { bodySizeLimit: "26mb" },
