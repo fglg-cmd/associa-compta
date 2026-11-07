@@ -130,7 +130,7 @@ export function DocumentsView({ orgId, docs, canWrite, folders, transactions, op
             <div className={cn("grid gap-5", creating ? "md:grid-cols-[1fr_400px]" : "md:grid-cols-[1fr_260px]")}>
               <Preview orgId={orgId} doc={selected} />
               {creating ? (
-                <DocumentOperation key={selected.id} orgId={orgId} docId={selected.id} onDone={() => setCreating(false)} onCreated={() => { close(); router.refresh(); }} />
+                <DocumentOperation key={selected.id} orgId={orgId} docId={selected.id} onDone={() => setCreating(false)} onCreated={() => { setSelected(null); setCreating(false); if (openId) router.replace(pathname); else router.refresh(); }} />
               ) : (
               <div className="grid content-start gap-4 text-[13px]">
                 {canWrite && !selected.entry_id && !selected.bank_transaction_id && (
